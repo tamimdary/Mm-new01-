@@ -1,0 +1,6 @@
+{
+  "name": "Madrasah Management",
+  "description": "A comprehensive Bengali Madrasah Management system (মাদ্রাসা ম্যানেজমেন্ট) featuring multi-role access control, date translation, customizable setup profile, and offline capability.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
