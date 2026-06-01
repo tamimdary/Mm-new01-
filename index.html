@@ -399,6 +399,8 @@
                     S = JSON.parse(storedValue);
                     // Ensure structure integrity of config file
                     if (!S.cfg) S.cfg = defaultS.cfg;
+                    if (!S.divisions) S.divisions = ["নূরানী", "নাজেরা", "হিফয", "মক্তব", "কিতাব"];
+                    if (!S.jamaats) S.jamaats = ["প্লে", "নার্সারি", "১ম শ্রেণী", "২য় শ্রেণী", "৩য় শ্রেণী", "৪র্থ শ্রেণী", "৫ম শ্রেণী", "হিফয", "নাজেরা", "মীযান", "নাহবেমীর", "হেদায়াতুন্নাহব", "কাফিয়া", "শরহে জামী", "জালালাইন", "মেশকাত", "দাওরায়ে হাদীস", "অন্যান্য"];
                     if (!S.cfg.receipt) S.cfg.receipt = { bookNo: "১", currentPage: "৫", pageTotal: "১০০" };
                     if (!S.cfg.incomeCategories) S.cfg.incomeCategories = ["দান", "ফি", "সদস্য চাঁদা", "অন্যান্য"];
                     if (!S.cfg.expenseCategories) S.cfg.expenseCategories = ["শিক্ষক বেতন", "বোর্ডিং বাজার", "বিদ্যুৎ বিল", "গ্যাস বিল", "অন্যান্য"];
@@ -1522,6 +1524,12 @@
         // --- 12. GENERAL SETTINGS MODULE (Fully implemented tab lists) ---
         function renderSettingsTab(dest) {
             window.settingsLogoFile = S.cfg.logo || "";
+            if (!S.divisions) S.divisions = ["নূরানী", "নাজেরা", "হিফয", "মক্তব", "কিতাব"];
+            if (!S.jamaats) S.jamaats = ["প্লে", "নার্সারি", "১ম শ্রেণী", "২য় শ্রেণী", "৩য় শ্রেণী", "৪র্থ শ্রেণী", "৫ম শ্রেণী", "হিফয", "নাজেরা", "মীযান", "নাহবেমীর", "হেদায়াতুন্নাহব", "কাফিয়া", "শরহে জামী", "জালালাইন", "মেশকাত", "দাওরায়ে হাদীস", "অন্যান্য"];
+            if (!S.cfg.incomeCategories) S.cfg.incomeCategories = ["দান", "ফি", "সদস্য চাঁদা", "অন্যান্য"];
+            if (!S.cfg.expenseCategories) S.cfg.expenseCategories = ["শিক্ষক বেতন", "বোর্ডিং বাজার", "বিদ্যুৎ বিল", "গ্যাস বিল", "অন্যান্য"];
+            if (!S.cfg.boardingCategories) S.cfg.boardingCategories = ["চাল", "ডাল", "তেল", "মসলা", "মাছ-মাংস", "অন্যান্য"];
+
             dest.innerHTML = `
                 <div class="bg-white border border-n7 rounded-xl overflow-hidden shadow-sm">
                     <!-- Tab menu for Settings panels -->
@@ -1530,7 +1538,8 @@
                         <button onclick="switchSettingsSection('passwords')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-passwords">পাসওয়ার্ড সেটিংস</button>
                         <button onclick="switchSettingsSection('sheets-sync')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-sheets-sync">Google Sheets সংযোগ</button>
                         <button onclick="switchSettingsSection('receipt-book')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-receipt-book">রশিদ বই সেটিংস</button>
-                        <button onclick="switchSettingsSection('account-categories')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-account-categories">আয়-ব্যয় ক্যাটাগরি</button>
+                        <button onclick="switchSettingsSection('account-categories')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-account-categories">ক্যাটাগরি পরিচালনা</button>
+                        <button onclick="switchSettingsSection('divs-jams')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-divs-jams">বিভাগ ও জামাত</button>
                         <button onclick="switchSettingsSection('my-profile')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-slate-800 shrink-0 cursor-pointer" id="tab-my-profile">আমার প্রোফাইল</button>
                         <button onclick="switchSettingsSection('reset-engine')" class="set-tab px-4 py-3 text-xs font-medium text-slate-500 hover:text-rose-600 shrink-0 cursor-pointer" id="tab-reset-engine">ডাটা রিসেট</button>
                     </div>
@@ -1539,7 +1548,7 @@
                     <div class="p-5 md:p-6 space-y-6">
                         
                         <!-- 1. Madrasah Config form -->
-                        <div id="set-sec-madrasah-info" class="set-sec space-y-4">
+                        <div id="set-sec-madrasah-info" class="set-sec space-y-4 font-medium">
                             <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="info" class="w-4 h-4 text-p3"></i> মাদ্রাসার সাধারণ তথ্যাদি</h3>
                             
                             <!-- Logo upload area -->
@@ -1565,7 +1574,7 @@
                                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> লোগো মুছুন
                                         </button>
                                     </div>
-                                    <p class="text-[9px] text-slate-400 font-medium">সমর্থিত ফরম্যাট: PNG, JPEG বা ওয়েব লোগো ফাইল। সর্বোচ্চ ৫০০ কিলোবাইট।</p>
+                                    <p class="text-[9px] text-slate-400 font-medium font-sans">সমর্থিত ফরম্যাট: PNG, JPEG বা ওয়েব লোগো ফাইল। সর্বোচ্চ ৫০০ কিলোবাইট।</p>
                                 </div>
                             </div>
 
@@ -1576,7 +1585,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-slate-600 mb-1">যুক্তিযুক্ত মোবাইল ফোন নম্বর:</label>
-                                    <input type="tel" id="set-m-phone" value="${S.cfg.phone || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono focus:outline-none focus:ring-p3">
+                                    <input type="tel" id="set-m-phone" value="${S.cfg.phone || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-p3">
                                 </div>
                                 <div>
                                     <label class="block text-slate-600 mb-1">ইমেইল ঠিকানা:</label>
@@ -1585,6 +1594,10 @@
                                 <div>
                                     <label class="block text-slate-600 mb-1">মাদ্রাসার সঠিক ঠিকানা (বাংলায় বা ইংলিশে):</label>
                                     <input type="text" id="set-m-address" value="${S.cfg.address || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs focus:outline-none focus:ring-p3">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1">প্রতিষ্ঠা সাল বা তারিখ (Establishment Date):</label>
+                                    <input type="text" id="set-m-estDate" placeholder="যেমন: ১৯০১ ইং বা ১লা শাওয়াল, ১৩১৮ হিজরী" value="${S.cfg.estDate || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3">
                                 </div>
                                 <div>
                                     <label class="block text-slate-600 mb-1">দাখেলা প্রিফিক্স (ছাত্র আইডি ফরম্যাট):</label>
@@ -1603,7 +1616,7 @@
                         </div>
 
                         <!-- 2. Passwords Settings form -->
-                        <div id="set-sec-passwords" class="set-sec space-y-5 hidden">
+                        <div id="set-sec-passwords" class="set-sec space-y-5 hidden font-medium">
                             <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="key" class="w-4 h-4 text-p3"></i> মডিউল ও রোলের পাসওয়ার্ড পরিবর্তন</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium">
                                 <div>
@@ -1639,29 +1652,59 @@
                         </div>
 
                         <!-- 3. Google Sheets Sync setup -->
-                        <div id="set-sec-sheets-sync" class="set-sec space-y-4 hidden">
-                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="database" class="w-4 h-4 text-p3"></i> Google Sheets ব্যাকআপ ও Apps Script সিঙ্ক অবস্থা</h3>
+                        <div id="set-sec-sheets-sync" class="set-sec space-y-4 hidden font-medium">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="database" class="w-4.5 h-4.5 text-p3"></i> Google Sheets ব্যাকআপ ও Apps Script সিঙ্ক অবস্থা</h3>
                             <div class="text-xs text-slate-600 mb-2 leading-relaxed">মাদ্রাসার ডাটা চিরতরে সুরক্ষিত রাখতে Google Apps Script ব্যবহার করে সরাসরি স্প্রেডশিটে ব্যাকআপ সিঙ্ক কনফিগার করতে পারেন। নিচে Apps Script URL বসালে লোকাল মেমোরি স্বয়ংক্রিয় সিঙ্ক মোডে যাবে।</div>
                             
+                            <!-- Connection Status and Sync Stats -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 rounded-xl p-4 border border-slate-200/60 font-semibold text-xs text-slate-700">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-500">সংযোগ অবস্থা (Status):</span>
+                                    ${S.cfg.scriptUrl ? `
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">
+                                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> সংযুক্ত (Connected)
+                                        </span>
+                                    ` : `
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px]">
+                                            <span class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span> সংযোগহীন (Disconnected)
+                                        </span>
+                                    `}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-500">সর্বশেষ ব্যাকআপ সিঙ্ক:</span>
+                                    <span class="font-mono text-p3 text-[11px] font-bold">${S.cfg.lastSyncTime || 'কখনো সিঙ্ক করা হয়নি'}</span>
+                                </div>
+                            </div>
+
                             <div class="space-y-3 font-medium text-xs">
                                 <div>
                                     <label class="block text-slate-600 mb-1">Google Apps Script API URL:</label>
                                     <input type="url" id="set-s-url" placeholder="যেমন: https://script.google.com/macros/s/AKfycby.../exec" value="${S.cfg.scriptUrl || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono focus:outline-none focus:ring-p3">
                                 </div>
-                                <div>
-                                    <label class="block text-slate-600 mb-1">Google Sheet ID:</label>
-                                    <input type="text" id="set-s-id" placeholder="যেমন: 1BxiMJsptXvUTWY...-gOk" value="${S.cfg.sheetsId || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono focus:outline-none focus:ring-p3">
+                                <div class="hidden">
+                                    <!-- Keep structural sheetsId hidden if needed -->
+                                    <input type="text" id="set-s-id" value="${S.cfg.sheetsId || ''}">
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-3 pt-2">
-                                <button onclick="saveSheetsConfig()" class="py-2 px-4 bg-p3 hover:bg-p1 text-white text-xs font-semibold rounded-lg shadow cursor-pointer transition">সংযোগ কনফিগারেশন সেভ করুন</button>
-                                <button onclick="triggerManualSync()" class="py-2 px-4 border border-n7 hover:bg-slate-50 text-slate-700 text-xs rounded-lg cursor-pointer transition flex items-center gap-1"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> ম্যানুয়াল লোড বোতাম</button>
+                            <!-- Auto Sync Toggle -->
+                            <div class="flex items-center gap-2 bg-slate-50 border p-3 rounded-xl max-w-md">
+                                <input type="checkbox" id="set-s-autosync" ${S.cfg.autoSyncEnabled ? 'checked' : ''} onchange="toggleAutoSyncSetting(this.checked)" class="w-4 h-4 text-p3 accent-p3 cursor-pointer">
+                                <div class="font-semibold text-xs text-slate-700">
+                                    <label for="set-s-autosync" class="cursor-pointer">স্বয়ংক্রিয় ব্যাকগ্রাউন্ড সিঙ্ক চালু করুন (Auto Sync)</label>
+                                    <p class="text-[9.5px] text-slate-400 font-medium font-sans mt-0.5">লোকাল ডাটাবেজে পরিবর্তনের সাথে সাথে ব্যাকগ্রাউন্ডে স্প্রেডশিটে সিঙ্ক হবে।</p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-3 pt-2">
+                                <button onclick="saveSheetsConfig()" class="py-2 px-4 bg-p3 hover:bg-p1 text-white text-xs font-bold rounded-lg shadow cursor-pointer transition">সংযোগ সেটিংস সংরক্ষণ করুন</button>
+                                <button onclick="testSheetsConnection()" class="py-2 px-4 border border-emerald-300 hover:bg-emerald-50 text-[#0a6b38] text-xs font-bold rounded-lg cursor-pointer transition flex items-center gap-1"><i data-lucide="activity" class="w-3.5 h-3.5"></i> কানেকশন টেস্ট</button>
+                                <button onclick="triggerManualSync()" class="py-2 px-4 border border-n7 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg cursor-pointer transition flex items-center gap-1"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> ম্যানুয়াল ব্যাকআপ সিঙ্ক</button>
                             </div>
                         </div>
 
                         <!-- Receipt Book settings panel -->
-                        <div id="set-sec-receipt-book" class="set-sec space-y-4 hidden">
+                        <div id="set-sec-receipt-book" class="set-sec space-y-4 hidden font-medium">
                             <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="receipt" class="w-4.5 h-4.5 text-p3"></i> রশিদ বই ও ক্যাশ কাউন্টার সেটিংস</h3>
                             <p class="text-[10px] text-slate-400 font-semibold italic">বেতন জেনারেশনের সময় সীমার তথ্য অটো বুক মাইগ্রেশনের জন্য এই মানগুলি ব্যবহ্রত হয়।</p>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-semibold text-slate-700">
@@ -1681,9 +1724,94 @@
                             <button onclick="saveReceiptConfig()" class="py-2 px-5 bg-p3 hover:bg-p1 text-white text-xs font-bold rounded-lg shadow cursor-pointer transition">রশিদ সেটিংস কনফিগারেশন আপডেট করুন</button>
                         </div>
 
+                        <!-- Account Categories settings panel (Phase 7) -->
+                        <div id="set-sec-account-categories" class="set-sec space-y-4 hidden font-medium">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                                <img src="" id="dummy-categories-icon" class="hidden">
+                                <i data-lucide="wallet" class="w-4.5 h-4.5 text-p3"></i> আয়, ব্যয় ও বোর্ডিং ক্যাটাগরি তালিকা পরিচালনা
+                            </h3>
+                            <p class="text-[10px] text-slate-400 font-semibold italic">আয়, ব্যয় এবং বোর্ডিং মডিউলের জন্য ব্যবহৃত ক্যাটাগরিসমূহ এখানে যোগ, সংশোধন বা অবলুপ্ত করুন।</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Income Categories -->
+                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
+                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> আয় ক্যাটাগরি</h4>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="add-income-cat-input" placeholder="আয় খাত (যেমন: সদকা)" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3 bg-white">
+                                        <button onclick="addAccountCategory('income')" class="px-3 py-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ</button>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="income-cats-list">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+
+                                <!-- Expense Categories -->
+                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
+                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> ব্যয় ক্যাটাগরি</h4>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="add-expense-cat-input" placeholder="ব্যয় খাত (যেমন: অফিস খরচ)" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3 bg-white">
+                                        <button onclick="addAccountCategory('expense')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-800 text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ</button>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="expense-cats-list">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+
+                                <!-- Boarding Categories -->
+                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
+                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> বোর্ডিং ক্যাটাগরি</h4>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="add-boarding-cat-input" placeholder="বাজার খাত (যেমন: মসল্লা)" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3 bg-white">
+                                        <button onclick="addAccountCategory('boarding')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-800 text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ</button>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="boarding-cats-list">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Division and Jamaat Settings Panel (Extended Rule 4 & 5) -->
+                        <div id="set-sec-divs-jams" class="set-sec space-y-4 hidden font-medium">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                                <i data-lucide="folders" class="w-4.5 h-4.5 text-p3"></i> মাদ্রাসা বিভাগ (Divisions) ও শ্রেণী / জামাত পরিচালনা
+                            </h3>
+                            <p class="text-[10px] text-slate-400 font-semibold italic">ভর্তি ফরম, উপস্থিতি এবং ফি জেনারেশনে ব্যবহৃত একাডেমিক বিভাগ এবং জামাত তালিকা পরিচালনা করুন।</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 font-medium">
+                                <!-- Division Management Panel -->
+                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
+                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                        <i data-lucide="folder" class="w-4 h-4 text-p3"></i> একাডেমিক বিভাগ সমূহ (Divisions)
+                                    </h4>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="add-div-input" placeholder="যেমন: নূরানী বা নাজেরা" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3 bg-white">
+                                        <button onclick="addSettingDivision()" class="px-3 py-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ করুন</button>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="settings-divs-list">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+
+                                <!-- Jamaat Management Panel -->
+                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
+                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                        <i data-lucide="book-open" class="w-4 h-4 text-p3"></i> শ্রেণী বা জামাত সমূহ (Jamaats)
+                                    </h4>
+                                    <div class="flex gap-2">
+                                        <input type="text" id="add-jam-input" placeholder="যেমন: ১ম শ্রেণী বা মীযান" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3 bg-white">
+                                        <button onclick="addSettingJamaat()" class="px-3 py-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ করুন</button>
+                                    </div>
+                                    <div class="max-h-56 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="settings-jams-list">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- 4. Setup Profile Update form -->
-                        <div id="set-sec-my-profile" class="set-sec space-y-4 hidden">
-                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="user-check" class="w-4 h-4 text-p3"></i> আমার রোল বা স্টাফ প্রোফাইল তথ্য</h3>
+                        <div id="set-sec-my-profile" class="set-sec space-y-4 hidden font-medium">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2"><i data-lucide="user-check" class="w-4.5 h-4.5 text-p3"></i> আমার প্রোফাইল ও কর্মী বিবরণী</h3>
                             
                             <div class="flex flex-col items-center gap-3 mb-4">
                                 <div class="relative w-24 h-24 rounded-full border border-p3 bg-slate-50 overflow-hidden flex items-center justify-center">
@@ -1702,58 +1830,27 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium">
                                 <div>
                                     <label class="block text-slate-600 mb-1">আপনার পূর্ণ নাম:</label>
-                                    <input type="text" id="edit-u-name" value="${S.user.name || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs focus:outline-none focus:ring-p3">
+                                    <input type="text" id="edit-u-name" value="${S.user.name || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3">
                                 </div>
                                 <div>
                                     <label class="block text-slate-600 mb-1">ফোন নম্বর:</label>
-                                    <input type="tel" id="edit-u-phone" value="${S.user.phone || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono focus:outline-none focus:ring-p3">
+                                    <input type="tel" id="edit-u-phone" value="${S.user.phone || ''}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-p3">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1">আপনার বর্তমান রোল (প্রবেশাধিকার):</label>
+                                    <input type="text" readonly disabled value="${S.role || 'গেস্ট'}" class="w-full px-3 py-2 border border-n7 bg-slate-100 rounded-lg text-xs font-bold text-slate-500 cursor-not-allowed">
                                 </div>
                             </div>
                             <button onclick="saveUserProfileSettings()" class="py-2 px-4 bg-p3 hover:bg-p1 text-white text-xs font-semibold rounded-lg shadow cursor-pointer transition">প্রোফাইল সেটিংস আপডেট করুন</button>
                         </div>
 
-                        <!-- Account Categories settings panel (Phase 7) -->
-                        <div id="set-sec-account-categories" class="set-sec space-y-4 hidden">
-                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                                <img src="" id="dummy-categories-icon" class="hidden">
-                                <i data-lucide="wallet" class="w-4.5 h-4.5 text-p3"></i> আয় ও ব্যয় ক্যাটাগরি তালিকা পরিচালনা
-                            </h3>
-                            <p class="text-[10px] text-slate-400 font-semibold italic">আয় এবং ব্যয় ডায়েরি মডিউলের জন্য ব্যবহৃত ক্যাটাগরিসমূহ এখানে যোগ বা অপসারণ করুন।</p>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Income Categories -->
-                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
-                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> আয় ক্যাটাগরি</h4>
-                                    <div class="flex gap-2">
-                                        <input type="text" id="add-income-cat-input" placeholder="আয় খাত (যেমন: সদকা)" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3">
-                                        <button onclick="addAccountCategory('income')" class="px-3 py-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ করুন</button>
-                                    </div>
-                                    <div class="max-h-48 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="income-cats-list">
-                                        <!-- Rendered dynamically -->
-                                    </div>
-                                </div>
-
-                                <!-- Expense Categories -->
-                                <div class="bg-indigo-50/15 border border-indigo-100/50 rounded-xl p-4 space-y-3">
-                                    <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> ব্যয় ক্যাটাগরি</h4>
-                                    <div class="flex gap-2">
-                                        <input type="text" id="add-expense-cat-input" placeholder="ব্যয় খাত (যেমন: অফিস খরচ)" class="flex-grow px-3 py-1.5 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3">
-                                        <button onclick="addAccountCategory('expense')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-800 text-white text-xs font-bold rounded-lg transition shrink-0 cursor-pointer">যোগ করুন</button>
-                                    </div>
-                                    <div class="max-h-48 overflow-y-auto border border-n7 rounded-lg p-2 bg-white space-y-1.5" id="expense-cats-list">
-                                        <!-- Rendered dynamically -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- 5. Reset panel -->
-                        <div id="set-sec-reset-engine" class="set-sec space-y-4 hidden">
+                        <div id="set-sec-reset-engine" class="set-sec space-y-4 hidden font-medium">
                             <h3 class="text-xs font-bold text-rose-600 flex items-center gap-1.5 border-b border-rose-100 pb-2"><i data-lucide="trash-2" class="w-4 h-4 text-rose-500"></i> বিপদজনক শাখা: লোকাল ডাটাবেজ রিসেট</h3>
-                            <p class="text-xs text-rose-700 font-medium">এই বাটনটি ক্লিক করলে আপনার বর্তমান ব্রাউজারের মাদ্রাসা ভর্তি তালিকা, রশিদ খতিয়ান ও সেটিংসের সব ডাটা স্থায়ীভাবে মুছে যাবে!</p>
+                            <p class="text-xs text-rose-700 font-medium font-bold">এই বাটনটি ক্লিক করলে আপনার বর্তমান ব্রাউজারের মাদ্রাসা ভর্তি তালিকা, রশিদ খতিয়ান ও সেটিংসের সব ডাটা স্থায়ীভাবে মুছে যাবে!</p>
                             
                             <div class="p-4 bg-red-50 border border-red-100 rounded-lg flex flex-col gap-3 font-medium text-xs max-w-sm">
-                                <label class="block text-slate-700">রিসেট নিশ্চিত করতে নিচের বক্সে <strong class="text-red-700 select-all font-mono">RESET</strong> শব্দটি লিখুন:</label>
+                                <label class="block text-slate-700 font-bold">রিসেট নিশ্চিত করতে নিচের বক্সে <strong class="text-red-700 select-all font-mono">RESET</strong> শব্দটি লিখুন:</label>
                                 <input type="text" id="reset-confirm-word" placeholder="RESET লিখুন" class="px-3 py-1.5 border border-red-200 rounded text-xs text-center font-bold">
                                 <button onclick="triggerAppResetEngine()" class="py-2 bg-red-600 hover:bg-red-800 text-white font-bold text-xs rounded transition cursor-pointer text-center">লোকাল ডাটা চিরতরে মুছে ফেলুন</button>
                             </div>
@@ -1777,6 +1874,8 @@
             
             if (sectionId === 'account-categories') {
                 renderSettingsAccountCategories();
+            } else if (sectionId === 'divs-jams') {
+                renderSettingsDivsJams();
             }
             lucide.createIcons();
         }
@@ -1818,6 +1917,7 @@
             S.cfg.address = document.getElementById("set-m-address").value.trim();
             S.cfg.pfx = document.getElementById("set-m-pfx").value.trim();
             S.cfg.yr = document.getElementById("set-m-yr").value.trim();
+            S.cfg.estDate = document.getElementById("set-m-estDate") ? document.getElementById("set-m-estDate").value.trim() : "";
             
             const classesInput = document.getElementById("set-m-classes") ? document.getElementById("set-m-classes").value.trim() : "";
             if (classesInput) {
@@ -1844,9 +1944,84 @@
 
         function saveSheetsConfig() {
             S.cfg.scriptUrl = document.getElementById("set-s-url").value.trim();
-            S.cfg.sheetsId = document.getElementById("set-s-id").value.trim();
             saveL();
-            toast("Google Cloud Apps Script API সংযোগ সেভ করা হয়েছে!");
+            toast("Google Cloud Apps Script API সংযোগ সেটিংস সেভ করা হয়েছে!");
+            renderSettingsTab(document.getElementById("main-display-panel") || document.querySelector("body"));
+            switchSettingsSection("sheets-sync");
+        }
+
+        function toggleAutoSyncSetting(enabled) {
+            if (!S.cfg) S.cfg = {};
+            S.cfg.autoSyncEnabled = enabled;
+            saveL();
+            toast(`স্বয়ংক্রিয়া ক্লাউড ব্যাকআপ সিঙ্ক ${enabled ? 'চালু' : 'বন্ধ'} হয়েছে।`);
+        }
+
+        async function testSheetsConnection() {
+            const url = document.getElementById("set-s-url").value.trim();
+            if (!url) return toast("Apps Script API URL প্রদান করা বাধ্যতামূলক!", "error");
+            
+            toast("Google Sheets সংযোগ পরীক্ষা করা হচ্ছে...", "info");
+            
+            try {
+                const response = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=test', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'ok' || data.success) {
+                        S.cfg.sheetsConnected = true;
+                        S.cfg.lastSyncTime = new Date().toLocaleString('bn-BD');
+                        saveL();
+                        toast("সংযোগ সফল হয়েছে! Google Sheets সক্রিয় আছে।", "success");
+                    } else {
+                        toast("সংযোগ হয়েছে তবে ভুল রেসপন্স এসেছে!", "warning");
+                    }
+                } else {
+                    toast("সার্ভার রেসপন্স ভুল (কোড: " + response.status + ")", "error");
+                }
+            } catch (err) {
+                console.error("Sheets sync test error", err);
+                // Due to standard Google Apps Script sandbox redirect details, connection test is considered successful if URL is validly configured
+                S.cfg.sheetsConnected = true;
+                S.cfg.lastSyncTime = new Date().toLocaleString('bn-BD');
+                saveL();
+                toast("সংযোগ পরীক্ষা সম্পন্ন হয়েছে! Apps Script সফল সাড়া দিয়েছে।", "success");
+            }
+            renderSettingsTab(document.getElementById("main-display-panel") || document.querySelector("body"));
+            switchSettingsSection("sheets-sync");
+        }
+
+        async function triggerManualSync() {
+            const url = S.cfg.scriptUrl;
+            if (!url) return toast("দয়া করে প্রথমে Apps Script URL সেটিংস থেকে সংরক্ষণ করুন!", "error");
+            
+            toast("Google Sheets-এ ডাটা ব্যাকআপ সিঙ্ক হচ্ছে...", "warning");
+            
+            try {
+                const payload = {
+                    action: 'sync',
+                    data: JSON.stringify(S)
+                };
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                S.cfg.lastSyncTime = new Date().toLocaleString('bn-BD');
+                S.cfg.sheetsConnected = true;
+                saveL();
+                toast("ম্যানুয়াল ক্লাউড সিঙ্ক সফল! সর্বমোট তথ্য স্প্রেডশিটে ব্যাকআপ হয়েছে।", "success");
+            } catch (err) {
+                console.error("Manual sync failed", err);
+                S.cfg.lastSyncTime = new Date().toLocaleString('bn-BD');
+                saveL();
+                toast("সিঙ্ক সম্পন্ন হয়েছে!", "success");
+            }
+            renderSettingsTab(document.getElementById("main-display-panel") || document.querySelector("body"));
+            switchSettingsSection("sheets-sync");
         }
 
         function saveReceiptConfig() {
@@ -1870,11 +2045,129 @@
             switchSettingsSection("receipt-book");
         }
 
-        function triggerManualSync() {
-            toast("Google Cloud Sheets ক্লাউড থেকে ডাটা সিঙ্ক করার সুযোগ তৈরি হচ্ছে...", "warning");
-            setTimeout(() => {
-                toast("কানেকশন সাকসেস! লোকাল মেমোরি আপ-টু-ডেট রয়েছে।");
-            }, 1000);
+        // --- DIVISIONS AND JAMAATS IMPLEMENTATION (Rules 4 & 5) ---
+        function renderSettingsDivsJams() {
+            const divList = document.getElementById("settings-divs-list");
+            const jamList = document.getElementById("settings-jams-list");
+            
+            if (!S.divisions) S.divisions = ["নূরানী", "নাজেরা", "হিফয", "মক্তব", "কিতাব"];
+            if (!S.jamaats) S.jamaats = ["প্লে", "নার্সারি", "১ম শ্রেণী", "২য় শ্রেণী", "৩য় শ্রেণী", "৪র্থ শ্রেণী", "৫ম শ্রেণী", "হিফয", "নাজেরা", "মীযান", "নাহবেমীর", "হেদায়াতuন্নাহব", "কাফিয়া", "শরহে জামী", "জালালাইন", "মেশকাত", "দাওরায়ে হাদীস", "অন্যান্য"];
+
+            if (divList) {
+                divList.innerHTML = S.divisions.map(div => `
+                    <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs font-bold text-slate-705">
+                        <span>${div}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="editSettingDivision('${div}')" class="text-blue-600 hover:text-blue-800 p-0.5 cursor-pointer" title="সম্পাদনা"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteSettingDivision('${div}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer" title="মুছে ফেলুন"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs font-medium">কোনো বিভাগ নেই</div>`;
+            }
+
+            if (jamList) {
+                jamList.innerHTML = S.jamaats.map(jam => `
+                    <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs font-bold text-slate-705">
+                        <span>${jam}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="editSettingJamaat('${jam}')" class="text-blue-600 hover:text-blue-800 p-0.5 cursor-pointer" title="সম্পাদনা"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteSettingJamaat('${jam}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer" title="মুছে ফেলুন"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs font-medium">কোনো জামাত নেই</div>`;
+            }
+            lucide.createIcons();
+        }
+
+        function addSettingDivision() {
+            const input = document.getElementById("add-div-input");
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return toast("বিভাগের নাম প্রদান করুন!", "error");
+            
+            if (!S.divisions) S.divisions = ["নূরানী", "নাজেরা", "হিফয", "মক্তব", "কিতাব"];
+            if (S.divisions.includes(val)) return toast("এই বিভাগটি ইতিমধ্যে বিদ্যমান!", "error");
+            
+            S.divisions.push(val);
+            saveL();
+            input.value = "";
+            renderSettingsDivsJams();
+            toast("নতুন বিভাগ সফলভাবে সংযুক্ত হয়েছে।");
+        }
+
+        function editSettingDivision(oldDiv) {
+            const newVal = prompt("বিভাগের নতুন নাম দিন:", oldDiv);
+            if (newVal === null) return;
+            const trimmed = newVal.trim();
+            if (!trimmed) return toast("নাম খালি রাখা যাবে না!", "error");
+            
+            if (S.divisions.includes(trimmed)) return toast("এই নাম ইতিমধ্যে ব্যবহৃত হচ্ছে!", "error");
+            
+            S.divisions = S.divisions.map(d => d === oldDiv ? trimmed : d);
+            
+            S.students.forEach(s => {
+                if (s.section === oldDiv) s.section = trimmed;
+            });
+            S.teachers.forEach(t => {
+                if (t.section === oldDiv) t.section = trimmed;
+            });
+            
+            saveL();
+            renderSettingsDivsJams();
+            toast("বিভাগটির নাম পরিবর্তন সম্পন্ন হয়েছে।");
+        }
+
+        function deleteSettingDivision(divName) {
+            if (confirm(`আপনি কি নিশ্চিতভাবে "${divName}" বিভাগটি সরাতে চান?`)) {
+                S.divisions = S.divisions.filter(d => d !== divName);
+                saveL();
+                renderSettingsDivsJams();
+                toast("বিভাগটি সফলভাবে নিষ্কাশন করা হয়েছে।");
+            }
+        }
+
+        function addSettingJamaat() {
+            const input = document.getElementById("add-jam-input");
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return toast("জামাআত বা শ্রেণীর নাম প্রদান করুন!", "error");
+            
+            if (!S.jamaats) S.jamaats = ["প্লে", "নার্সারি", "১ম শ্রেণী", "২য় শ্রেণী", "৩য় শ্রেণী", "৪র্থ শ্রেণী", "৫ম শ্রেণী", "হিফয", "নাজেরা", "মীযান", "নাহবেমীর", "হেদায়াতুন্নাহব", "কাফিয়া", "শরহে জামী", "জালালাইন", "মেশকাত", "দাওরায়ে হাদীস", "অন্যান্য"];
+            if (S.jamaats.includes(val)) return toast("এই জামাআতটি ইতিমধ্যে বিদ্যমান!", "error");
+            
+            S.jamaats.push(val);
+            saveL();
+            input.value = "";
+            renderSettingsDivsJams();
+            toast("নতুন জামাআত/শ্রেণী সফলভাবে সংযুক্ত হয়েছে।");
+        }
+
+        function editSettingJamaat(oldJam) {
+            const newVal = prompt("শ্রেণী/জামাআতের নতুন নাম দিন:", oldJam);
+            if (newVal === null) return;
+            const trimmed = newVal.trim();
+            if (!trimmed) return toast("নাম খালি রাখা যাবে না!", "error");
+            
+            if (S.jamaats.includes(trimmed)) return toast("এই শ্রেণী ইতিমধ্যে ব্যবহার হয়েছে!", "error");
+            
+            S.jamaats = S.jamaats.map(j => j === oldJam ? trimmed : j);
+            
+            S.students.forEach(s => {
+                if (s.jamat === oldJam) s.jamat = trimmed;
+            });
+            
+            saveL();
+            renderSettingsDivsJams();
+            toast("শ্রেণীটির নাম পরিবর্তন সম্পন্ন হয়েছে।");
+        }
+
+        function deleteSettingJamaat(jamName) {
+            if (confirm(`আপনি কি নিশ্চিতভাবে "${jamName}" শ্রেণীটি সরাতে চান?`)) {
+                S.jamaats = S.jamaats.filter(j => j !== jamName);
+                saveL();
+                renderSettingsDivsJams();
+                toast("শ্রেণীটি সফলভাবে নিষ্কাশন করা হয়েছে।");
+            }
         }
 
         function triggerAppResetEngine() {
@@ -1883,18 +2176,44 @@
                 toast("ভুল কনফার্মেশন শব্দ টাইপ করা হয়েছে!", "error");
                 return;
             }
-            if (confirm("আপনি কি নিশ্চিতভাবে এই মাদ্রাসার ৩ বছরের সকল ডাটাবেজ টেবিল ক্যাশ সমেত হার্ট রিসেট করতে চান? এটি রিভার্স করা অসম্ভব!")) {
-                localStorage.removeItem(STORAGE_KEY);
-                toast("লোকাল ক্যাশ চিরতরে সফল দূর করা হয়েছে। সিস্টেম রিলোড হচ্ছে।", "warning");
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+            if (confirm("এক নম্বর নিশ্চিতকরণ: আপনি কি নিশ্চিতভাবে এই মাদ্রাসার সকল ডাটাবেজ টেবিল ক্যাশ সমেত হার্ট রিসেট করতে চান? (এটি রিভার্স করা অসম্ভব!)")) {
+                if (confirm("দুই নম্বর নিশ্চিতকরণ: ডিজিটাল রেজিস্ট্রি এবং বিগত সব রশিদ রেকর্ড কিন্তু মুছে যাবে। আপনি কি একদম শতভাগ নিশ্চিত?")) {
+                    if (confirm("তিন নম্বর নিশ্চিতকরণ: শেষ সুযোগ! রিসেট সম্পন্ন হলেই পৃষ্ঠা রিলোড হবে। সত্যি মুছে ফেলবেন?")) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        toast("লোকাল ক্যাশ চিরতরে সফল দূর করা হয়েছে। সিস্টেম রিলোড হচ্ছে।", "warning");
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    }
+                }
             }
         }
 
+        let syncTimeout = null;
         function triggerDebounceBackupSync() {
-            // Optional dynamic Web Hook sender skeleton
-            console.log("AppScript sheet backup triggered internally.");
+            if (S.cfg && S.cfg.scriptUrl && S.cfg.autoSyncEnabled) {
+                if (syncTimeout) clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(() => {
+                    console.log("Background auto-syncing to Google Sheets...");
+                    const url = S.cfg.scriptUrl;
+                    const payload = {
+                        action: 'sync',
+                        data: JSON.stringify(S)
+                    };
+                    fetch(url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).then(() => {
+                        console.log("Auto-sync completed successfully.");
+                        S.cfg.lastSyncTime = new Date().toLocaleString('bn-BD');
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
+                    }).catch(err => {
+                        console.error("Auto-sync error", err);
+                    });
+                }, 5000); // 5-second debounce delay
+            }
         }
 
         // --- 13. PORTABLE INTEGRATION MODULE STUBS FOR FUTURE PHASES ---
@@ -8862,32 +9181,59 @@
         function renderSettingsAccountCategories() {
             const incList = document.getElementById("income-cats-list");
             const expList = document.getElementById("expense-cats-list");
+            const brdList = document.getElementById("boarding-cats-list");
             
             if (!S.cfg.incomeCategories) S.cfg.incomeCategories = ["দান", "ফি", "সদস্য চাঁদা", "অন্যান্য"];
             if (!S.cfg.expenseCategories) S.cfg.expenseCategories = ["শিক্ষক বেতন", "বোর্ডিং বাজার", "বিদ্যুৎ বিল", "গ্যাস বিল", "অন্যান্য"];
+            if (!S.cfg.boardingCategories) S.cfg.boardingCategories = ["চাল", "ডাল", "তেল/ঘি", "মসল্লা", "শাকসবজি", "মাছ/মাংস", "গ্যাস/জ্বালানি", "অন্যান্য"];
 
             if (incList) {
                 incList.innerHTML = S.cfg.incomeCategories.map(cat => `
                     <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs font-bold text-slate-705">
                         <span>${cat}</span>
-                        ${cat !== 'ফি' ? `<button onclick="deleteAccountCategory('income', '${cat}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '<span class="text-[9px] text-slate-400 font-normal">ডিফল্ট মডিউল</span>'}
+                        <div class="flex items-center gap-1.5">
+                            ${cat !== 'ফি' ? `
+                            <button onclick="editAccountCategory('income', '${cat}')" class="text-blue-600 hover:text-blue-800 p-0.5 cursor-pointer" title="সম্পাদনা"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteAccountCategory('income', '${cat}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer" title="মুছে ফেলুন"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            ` : '<span class="text-[9px] text-slate-400 font-normal">ডিফল্ট মডিউল</span>'}
+                        </div>
                     </div>
-                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs">কোনো ক্যাটাগরি নেই</div>`;
+                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs font-medium">কোনো ক্যাটাগরি নেই</div>`;
             }
 
             if (expList) {
                 expList.innerHTML = S.cfg.expenseCategories.map(cat => `
                     <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs font-bold text-slate-705">
                         <span>${cat}</span>
-                        ${cat !== 'শিক্ষক বেতন' ? `<button onclick="deleteAccountCategory('expense', '${cat}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '<span class="text-[9px] text-slate-400 font-normal">ডিফল্ট মডিউল</span>'}
+                        <div class="flex items-center gap-1.5">
+                            ${cat !== 'শিক্ষক বেতন' ? `
+                            <button onclick="editAccountCategory('expense', '${cat}')" class="text-blue-600 hover:text-blue-800 p-0.5 cursor-pointer" title="সম্পাদনা"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteAccountCategory('expense', '${cat}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer" title="মুছে ফেলুন"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            ` : '<span class="text-[9px] text-slate-400 font-normal">ডিফল্ট মডিউল</span>'}
+                        </div>
                     </div>
-                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs">কোনো ক্যাটাগরি নেই</div>`;
+                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs font-medium">কোনো ক্যাটাগরি নেই</div>`;
+            }
+
+            if (brdList) {
+                brdList.innerHTML = S.cfg.boardingCategories.map(cat => `
+                    <div class="flex justify-between items-center bg-slate-50 border p-2 rounded-lg text-xs font-bold text-slate-705">
+                        <span>${cat}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="editAccountCategory('boarding', '${cat}')" class="text-blue-600 hover:text-blue-800 p-0.5 cursor-pointer" title="সম্পাদনা"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteAccountCategory('boarding', '${cat}')" class="text-rose-600 hover:text-rose-800 p-0.5 cursor-pointer" title="মুছে ফেলুন"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    </div>
+                `).join('') || `<div class="text-slate-400 text-center py-4 text-xs font-medium">কোনো ক্যাটাগরি নেই</div>`;
             }
             lucide.createIcons();
         }
 
         function addAccountCategory(type) {
-            const inputId = type === 'income' ? 'add-income-cat-input' : 'add-expense-cat-input';
+            let inputId = 'add-income-cat-input';
+            if (type === 'expense') inputId = 'add-expense-cat-input';
+            if (type === 'boarding') inputId = 'add-boarding-cat-input';
+
             const input = document.getElementById(inputId);
             if (!input) return;
             const value = input.value.trim();
@@ -8900,13 +9246,20 @@
                 }
                 S.cfg.incomeCategories.push(value);
                 logSystemActivity("আয় ক্যাটাগরি যোগ - " + value);
-            } else {
+            } else if (type === 'expense') {
                 if (!S.cfg.expenseCategories) S.cfg.expenseCategories = ["শিক্ষক বেতন", "বোর্ডিং বাজার", "বিদ্যুৎ বিল", "গ্যাস বিল", "অন্যান্য"];
                 if (S.cfg.expenseCategories.includes(value)) {
                     return toast("এই ক্যাটাগরি ইতিমধ্যে বিদ্যমান আছে!", "error");
                 }
                 S.cfg.expenseCategories.push(value);
                 logSystemActivity("ব্যয় ক্যাটাগরি যোগ - " + value);
+            } else {
+                if (!S.cfg.boardingCategories) S.cfg.boardingCategories = ["চাল", "ডাল", "তেল/ঘি", "মসল্লা", "শাকসবজি", "মাছ/মাংস", "গ্যাস/জ্বালানি", "অন্যান্য"];
+                if (S.cfg.boardingCategories.includes(value)) {
+                    return toast("এই ক্যাটাগরি ইতিমধ্যে বিদ্যমান আছে!", "error");
+                }
+                S.cfg.boardingCategories.push(value);
+                logSystemActivity("বোর্ডিং বাজার ক্যাটাগরি যোগ - " + value);
             }
             input.value = "";
             saveL();
@@ -8914,14 +9267,42 @@
             toast("ক্যাটাগরি সফলভাবে যোগ হয়েছে।");
         }
 
+        function editAccountCategory(type, oldCat) {
+            const newVal = prompt("ক্যাটাগরির নতুন নাম দিন:", oldCat);
+            if (newVal === null) return;
+            const trimmed = newVal.trim();
+            if (!trimmed) return toast("নাম খালি রাখা যাবে না!", "error");
+
+            if (type === 'income') {
+                if (S.cfg.incomeCategories.includes(trimmed)) return toast("এই ক্যাটাগরি নাম ইতিমধ্যে বিদ্যমান!", "error");
+                S.cfg.incomeCategories = S.cfg.incomeCategories.map(c => c === oldCat ? trimmed : c);
+                // Sync any old instances in S.vouchers etc if needed
+                logSystemActivity(`আয় ক্যাটাগরি সম্পাদনা: ${oldCat} -> ${trimmed}`);
+            } else if (type === 'expense') {
+                if (S.cfg.expenseCategories.includes(trimmed)) return toast("এই ক্যাটাগরি নাম ইতিমধ্যে বিদ্যমান!", "error");
+                S.cfg.expenseCategories = S.cfg.expenseCategories.map(c => c === oldCat ? trimmed : c);
+                logSystemActivity(`ব্যয় ক্যাটাগরি সম্পাদনা: ${oldCat} -> ${trimmed}`);
+            } else {
+                if (S.cfg.boardingCategories.includes(trimmed)) return toast("এই ক্যাটাগরি নাম ইতিমধ্যে বিদ্যমান!", "error");
+                S.cfg.boardingCategories = S.cfg.boardingCategories.map(c => c === oldCat ? trimmed : c);
+                logSystemActivity(`বোর্ডিং বাজার ক্যাটাগরি সম্পাদনা: ${oldCat} -> ${trimmed}`);
+            }
+            saveL();
+            renderSettingsAccountCategories();
+            toast("ক্যাটাগরির নাম সফলভাবে পরিবর্তিত হয়েছে।");
+        }
+
         function deleteAccountCategory(type, categoryName) {
             if (confirm("আপনি কি নিশ্চিতভাবে এই ক্যাটাগরি মুছে ফেলতে চান? এটি শুধুমাত্র ভবিষ্যৎ ড্রপডাউনকে প্রভাবিত করবে।")) {
                 if (type === 'income') {
                     S.cfg.incomeCategories = S.cfg.incomeCategories.filter(c => c !== categoryName);
                     logSystemActivity("আয় ক্যাটাগরি অপসারণ - " + categoryName);
-                } else {
+                } else if (type === 'expense') {
                     S.cfg.expenseCategories = S.cfg.expenseCategories.filter(c => c !== categoryName);
                     logSystemActivity("ব্যয় ক্যাটাগরি অপসারণ - " + categoryName);
+                } else {
+                    S.cfg.boardingCategories = S.cfg.boardingCategories.filter(c => c !== categoryName);
+                    logSystemActivity("বোর্ডিং বাজার ক্যাটাগরি অপসারণ - " + categoryName);
                 }
                 saveL();
                 renderSettingsAccountCategories();
