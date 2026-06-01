@@ -4453,7 +4453,7 @@
                         <span>হিসাব ও রেজি: দস্তখত ___________________</span>
                     </div>
 
-                    <script>
+                    \<script>
                         window.onload = function() {
                             window.print();
                         };
@@ -5175,6 +5175,22 @@
                 });
             }
 
+            // 3. Add teacher salaries from S.salaries
+            if (S.salaries) {
+                S.salaries.forEach(s => {
+                    list.push({
+                        id: "SAL-" + s.id,
+                        type: "ব্যয়",
+                        source: "শিক্ষক বেতন",
+                        category: "শিক্ষক বেতন",
+                        amount: parseInt(toEngNum(s.amount)) || 0,
+                        date: s.paymentDate || "",
+                        description: `শিক্ষক মাসিক বেতন প্রদান - ${s.teacherName || ''} (মাস: ${s.month || ''})`,
+                        refNo: s.id || ""
+                    });
+                });
+            }
+
             // Return sorted by date descending, then ID descending
             return list.sort((a,b) => b.date.localeCompare(a.date));
         }
@@ -5780,6 +5796,536 @@
             lucide.createIcons();
         }
 
+        function updateLedgerFilters() {
+            window.ledgerFilters = window.ledgerFilters || { search: "", type: "", category: "", date: "" };
+            const searchVal = document.getElementById("lf-search")?.value || "";
+            const typeVal = document.getElementById("lf-type")?.value || "";
+            const catVal = document.getElementById("lf-category")?.value || "";
+            const dateVal = document.getElementById("lf-date")?.value || "";
+            
+            window.ledgerFilters.search = searchVal;
+            window.ledgerFilters.type = typeVal;
+            window.ledgerFilters.category = catVal;
+            window.ledgerFilters.date = dateVal;
+            
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) renderAccountsSummaryTab(panel);
+        }
+
+        function updateIncomeFilters() {
+            window.incomeFilters = window.incomeFilters || { search: "", category: "", date: "" };
+            const searchVal = document.getElementById("inf-search")?.value || "";
+            const catVal = document.getElementById("inf-category")?.value || "";
+            const dateVal = document.getElementById("inf-date")?.value || "";
+            
+            window.incomeFilters.search = searchVal;
+            window.incomeFilters.category = catVal;
+            window.incomeFilters.date = dateVal;
+            
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) renderAccountsIncomeTab(panel);
+        }
+
+        function updateExpenseFilters() {
+            window.expenseFilters = window.expenseFilters || { search: "", category: "", date: "" };
+            const searchVal = document.getElementById("exf-search")?.value || "";
+            const catVal = document.getElementById("exf-category")?.value || "";
+            const dateVal = document.getElementById("exf-date")?.value || "";
+            
+            window.expenseFilters.search = searchVal;
+            window.expenseFilters.category = catVal;
+            window.expenseFilters.date = dateVal;
+            
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) renderAccountsExpenseTab(panel);
+        }
+
+        function saveIncomeForm(event) {
+            event.preventDefault();
+            const date = document.getElementById("inc-date").value;
+            const category = document.getElementById("inc-category").value;
+            const amount = document.getElementById("inc-amount").value;
+            const description = document.getElementById("inc-desc").value.trim();
+            const reference = document.getElementById("inc-ref").value.trim();
+            
+            if (!category) return toast("আয় খাত সিলেক্ট করুন!", "error");
+            if (!amount || amount <= 0) return toast("সঠিক টাকার পরিমাণ দিন!", "error");
+            if (!description) return toast("বিবরণ দিন!", "error");
+            
+            if (!S.expenses) S.expenses = [];
+            
+            if (window.editingTransactionId) {
+                const idx = S.expenses.findIndex(e => e.id === window.editingTransactionId);
+                if (idx !== -1) {
+                    S.expenses[idx] = {
+                        ...S.expenses[idx],
+                        date,
+                        category,
+                        amount: toEngNum(amount),
+                        description,
+                        reference
+                    };
+                    toast("আয় রেকর্ড পরিবর্তন সম্পন্ন হয়েছে।");
+                }
+                window.editingTransactionId = null;
+            } else {
+                const newTransaction = {
+                    id: "INC-" + Date.now(),
+                    type: "আয়",
+                    date,
+                    category,
+                    amount: toEngNum(amount),
+                    description,
+                    reference
+                };
+                S.expenses.unshift(newTransaction);
+                toast("আয় ক্যাশ বুকে সংরক্ষণ করা হয়েছে।");
+            }
+            
+            saveL();
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) renderAccountsIncomeTab(panel);
+        }
+
+        function saveExpenseForm(event) {
+            event.preventDefault();
+            const date = document.getElementById("exp-date").value;
+            const category = document.getElementById("exp-category").value;
+            const amount = document.getElementById("exp-amount").value;
+            const description = document.getElementById("exp-desc").value.trim();
+            const reference = document.getElementById("exp-ref").value.trim();
+            
+            if (!category) return toast("ব্যয় খাত সিলেক্ট করুন!", "error");
+            if (!amount || amount <= 0) return toast("সঠিক টাকার পরিমাণ দিন!", "error");
+            if (!description) return toast("বিবরণ দিন!", "error");
+            
+            if (!S.expenses) S.expenses = [];
+            
+            if (window.editingTransactionId) {
+                const idx = S.expenses.findIndex(e => e.id === window.editingTransactionId);
+                if (idx !== -1) {
+                    S.expenses[idx] = {
+                        ...S.expenses[idx],
+                        date,
+                        category,
+                        amount: toEngNum(amount),
+                        description,
+                        reference
+                    };
+                    toast("ব্যয় রেকর্ড সংশোধন সম্পন্ন হয়েছে।");
+                }
+                window.editingTransactionId = null;
+            } else {
+                const newTransaction = {
+                    id: "EXP-" + Date.now(),
+                    type: "ব্যয়",
+                    date,
+                    category,
+                    amount: toEngNum(amount),
+                    description,
+                    reference
+                };
+                S.expenses.unshift(newTransaction);
+                toast("ব্যয় ভাউচার ক্যাশ বুকে নথিভুক্ত করা হয়েছে।");
+            }
+            
+            saveL();
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) renderAccountsExpenseTab(panel);
+        }
+
+        function editTransaction(type, id) {
+            window.editingTransactionId = id;
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) {
+                if (type === 'income') {
+                    renderAccountsIncomeTab(panel);
+                } else {
+                    renderAccountsExpenseTab(panel);
+                }
+            }
+        }
+
+        function cancelEditingTransaction(type) {
+            window.editingTransactionId = null;
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) {
+                if (type === 'income') {
+                    renderAccountsIncomeTab(panel);
+                } else {
+                    renderAccountsExpenseTab(panel);
+                }
+            }
+        }
+
+        function deleteTransaction(id, typeBengali) {
+            if (confirm(`আপনি কি নিশ্চিতভাবে এই ${typeBengali} রেকর্ডটি ক্যাশ বুক থেকে চিরতরে মুছে ফেলতে চান?`)) {
+                if (!S.expenses) S.expenses = [];
+                S.expenses = S.expenses.filter(e => e.id !== id);
+                saveL();
+                toast(`${typeBengali} রেকর্ড সফলভাবে মুছে ফেলা হয়েছে।`);
+                
+                const panel = document.getElementById("accounts-panel-container");
+                if (panel) {
+                    if (typeBengali === 'আয়') {
+                        renderAccountsIncomeTab(panel);
+                    } else {
+                        renderAccountsExpenseTab(panel);
+                    }
+                }
+            }
+        }
+
+        function renderAccountsSalaryTab(container) {
+            const salaries = S.salaries || [];
+            const teachers = S.teachers || [];
+            
+            container.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    
+                    <!-- Left: Teachers List with current status & Quick Pay -->
+                    <div class="lg:col-span-5 bg-white border border-n7 rounded-xl p-5 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="users" class="w-4 h-4 text-p3"></i> শিক্ষক ও স্টাফ তালিকা
+                            </h3>
+                            <span class="px-2 py-0.5 text-[10px] bg-indigo-50 text-indigo-700 font-bold border rounded-full">মোট: ${bnNum(teachers.length)} জন</span>
+                        </div>
+                        
+                        <div class="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                            ${teachers.map(t => {
+                                const personalSalaries = salaries.filter(s => s.teacherId === t.id);
+                                let lastPaidInfo = "কখনো পেইড নয়";
+                                if (personalSalaries.length > 0) {
+                                    const sorted = personalSalaries.sort((a,b) => b.paymentDate.localeCompare(a.paymentDate));
+                                    lastPaidInfo = `<span class="text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded font-extrabold text-[9px]">${sorted[0].month} (${bnNum(sorted[0].paymentDate.substring(0, 4))})</span>`;
+                                }
+                                return `
+                                    <div class="flex items-center justify-between p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition">
+                                        <div class="space-y-1">
+                                            <h4 class="text-xs font-bold text-slate-800">${t.name}</h4>
+                                            <p class="text-slate-500 text-[10px] font-semibold">${t.designation} | বেতন: <span class="font-mono text-slate-700 font-extrabold">৳${bnNum(t.salary)}</span></p>
+                                            <div class="text-[10px] text-slate-400 mt-1">সর্বশেষ বেতন: ${lastPaidInfo}</div>
+                                        </div>
+                                        <button onclick="openSalaryForm(null, '${t.id}')" class="px-3 py-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-[10px] font-extrabold rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition">
+                                            <i data-lucide="banknote" class="w-3.5 h-3.5"></i> বেতন দিন
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('') || `<div class="text-slate-400 text-center py-8">কোনো শিক্ষক পাওয়া যায়নি।</div>`}
+                        </div>
+                    </div>
+
+                    <!-- Right: Salaries Paid Ledger -->
+                    <div class="lg:col-span-7 bg-white border border-n7 rounded-xl p-5 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i> বেতন পরিশোধ খতিয়ান বুক
+                            </h3>
+                            <button onclick="openSalaryForm()" class="px-3 py-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-[10px] font-extrabold rounded-lg flex items-center gap-1 cursor-pointer transition">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> ম্যানুয়াল বেতন ভাউচার
+                            </button>
+                        </div>
+
+                        <!-- Salaries List Table -->
+                        <div class="overflow-x-auto border border-n7 rounded-xl bg-white">
+                            <table class="w-full text-left font-semibold text-xs text-slate-700">
+                                <thead class="bg-slate-50 text-slate-550 border-b border-n7 text-[9.5px] uppercase">
+                                    <tr>
+                                        <th class="px-3.5 py-2.5">তারিখ</th>
+                                        <th class="px-3.5 py-2.5">শিক্ষক</th>
+                                        <th class="px-3.5 py-2.5">মাস</th>
+                                        <th class="px-3.5 py-2.5">ব্যাখ্যা / মাধ্যম</th>
+                                        <th class="px-3.5 py-2.5 text-right">টাকা (৳)</th>
+                                        <th class="px-3.5 py-2.5 text-right">অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${salaries.map(s => {
+                                        return `
+                                            <tr class="hover:bg-slate-50/10 transition">
+                                                <td class="px-3.5 py-3 font-mono text-[10px] text-slate-500">${bnNum(s.paymentDate)}</td>
+                                                <td class="px-3.5 py-3 text-slate-800 font-bold">${s.teacherName || 'অজানা শিক্ষক'}</td>
+                                                <td class="px-3.5 py-3"><span class="px-1.5 py-0.5 rounded text-[9px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold">${s.month}</span></td>
+                                                <td class="px-3.5 py-3 text-slate-500 text-[10.5px] font-medium">${s.notes || '—'}</td>
+                                                <td class="px-3.5 py-3 text-right font-mono font-bold text-rose-600">৳ ${bnNum(s.amount)}</td>
+                                                <td class="px-3.5 py-3 text-right">
+                                                    <div class="flex gap-1 justify-end text-[9.5px]">
+                                                        <button onclick="openSalaryForm('${s.id}')" class="px-2 py-0.5 border text-slate-700 border-slate-200 hover:bg-slate-50 rounded cursor-pointer transition">সম্পাদনা</button>
+                                                        <button onclick="triggerSalaryDelete('${s.id}')" class="px-2 py-0.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-150 rounded cursor-pointer transition">মুছুন</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('') || `
+                                        <tr>
+                                            <td colspan="6" class="text-center py-8 text-slate-400">কোনো বেতন পরিশোধের ইতিহাস পাওয়া যায়নি।</td>
+                                        </tr>
+                                    `}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderAccountsReportsTab(container) {
+            window.activeReportMonth = window.activeReportMonth || new Date().toISOString().substring(0, 7);
+            
+            const unified = getUnifiedLedger();
+            const currentMonthPrefix = window.activeReportMonth;
+            
+            const monthEntries = unified.filter(item => item.date && item.date.startsWith(currentMonthPrefix));
+            
+            const incomeCats = {};
+            const expenseCats = {};
+            let monthIncomeTotal = 0;
+            let monthExpenseTotal = 0;
+            
+            monthEntries.forEach(item => {
+                const amt = item.amount;
+                if (item.type === "আয়") {
+                    incomeCats[item.category] = (incomeCats[item.category] || 0) + amt;
+                    monthIncomeTotal += amt;
+                } else if (item.type === "ব্যয়") {
+                    expenseCats[item.category] = (expenseCats[item.category] || 0) + amt;
+                    monthExpenseTotal += amt;
+                }
+            });
+
+            const today = new Date();
+            const monthOptions = [];
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                const isoStr = d.toISOString().substring(0, 7);
+                const enYear = d.getFullYear();
+                const bnMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+                const label = `${bnMonths[d.getMonth()]} - ${bnNum(enYear)}`;
+                monthOptions.push(`<option value="${isoStr}" ${isoStr === currentMonthPrefix ? 'selected' : ''}>${label}</option>`);
+            }
+
+            container.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    
+                    <!-- Left: Month Select and audit widget -->
+                    <div class="lg:col-span-4 bg-white border border-n7 rounded-xl p-5 shadow-sm space-y-4">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="calendar" class="w-4 h-4 text-[#0a6b38]"></i> রিপোর্ট ফিল্টার প্যানেল
+                            </h3>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-slate-600 text-[10px] font-bold mb-1">মাস ও বছর নির্বাচন করুন:</label>
+                            <select id="report-month-select" onchange="onReportMonthChange(this.value)" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold bg-white focus:ring-p3">
+                                ${monthOptions.join('')}
+                            </select>
+                        </div>
+
+                        <div class="bg-slate-50 border p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-black text-slate-700">মাসিক ক্যাশ সামারি</h4>
+                            <div class="flex justify-between text-[11px] font-semibold text-slate-500 pt-1">
+                                <span>মোট প্রাপ্তি / আয়:</span>
+                                <span class="text-[#0a6b38] font-mono">৳ ${bnNum(monthIncomeTotal)}</span>
+                            </div>
+                            <div class="flex justify-between text-[11px] font-semibold text-slate-500 pt-1">
+                                <span>মোট খরচ / ব্যয়:</span>
+                                <span class="text-rose-600 font-mono">৳ ${bnNum(monthExpenseTotal)}</span>
+                            </div>
+                            <div class="border-t border-dashed pt-2 flex justify-between text-xs font-bold text-slate-800">
+                                <span>নিট ব্যালেন্স:</span>
+                                <span class="${monthIncomeTotal >= monthExpenseTotal ? 'text-emerald-800' : 'text-rose-700'} font-mono">৳ ${bnNum(monthIncomeTotal - monthExpenseTotal)}</span>
+                            </div>
+                        </div>
+
+                        <button onclick="printMonthlyReport()" class="w-full py-2.5 bg-[#0a6b38] hover:bg-[#07532b] text-white rounded-lg font-bold text-[11px] transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                            <i data-lucide="printer" class="w-4 h-4"></i> এই মাসের খতিয়ান মুদ্রণ করুন
+                        </button>
+                    </div>
+
+                    <!-- Right: Audit breakdown columns -->
+                    <div class="lg:col-span-8 bg-white border border-n7 rounded-xl p-5 shadow-sm space-y-5">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-600"></i> খাতভিত্তিক আয়-ব্যয় অডিট বিবরণী
+                            </h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 text-xs font-semibold">
+                            <!-- Income cats display -->
+                            <div class="space-y-3">
+                                <h4 class="text-xs font-black text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100 flex items-center gap-1.5">
+                                    <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> খাতভিত্তিক মাসিক আয়
+                                </h4>
+                                <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                    ${Object.entries(incomeCats).map(([cat, total]) => `
+                                        <div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-[11px]">
+                                            <span class="text-slate-700 font-bold">${cat}</span>
+                                            <strong class="text-[#0a6b38] font-mono">৳ ${bnNum(total)}</strong>
+                                        </div>
+                                    `).join('') || `<div class="text-slate-400 text-center py-6 text-[10.5px]">এই মাসে কোনো আয় নথিভুক্ত নেই।</div>`}
+                                </div>
+                            </div>
+
+                            <!-- Expense cats display -->
+                            <div class="space-y-3">
+                                <h4 class="text-xs font-black text-rose-800 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-100 flex items-center gap-1.5">
+                                    <i data-lucide="trending-down" class="w-3.5 h-3.5"></i> খাতভিত্তিক মাসিক ব্যয়
+                                </h4>
+                                <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                                    ${Object.entries(expenseCats).map(([cat, total]) => `
+                                        <div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-[11px]">
+                                            <span class="text-slate-700 font-bold">${cat}</span>
+                                            <strong class="text-rose-600 font-mono">৳ ${bnNum(total)}</strong>
+                                        </div>
+                                    `).join('') || `<div class="text-slate-400 text-center py-6 text-[10.5px]">এই মাসে কোনো ব্যয় নথিভুক্ত নেই।</div>`}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function onReportMonthChange(val) {
+            window.activeReportMonth = val;
+            const panel = document.getElementById("accounts-panel-container");
+            if (panel) renderAccountsReportsTab(panel);
+        }
+
+        function printMonthlyReport() {
+            const S_local = S;
+            const unified = getUnifiedLedger();
+            const currentMonthPrefix = window.activeReportMonth || new Date().toISOString().substring(0, 7);
+            const monthEntries = unified.filter(item => item.date && item.date.startsWith(currentMonthPrefix));
+            
+            const enYear = currentMonthPrefix.split("-")[0];
+            const enMonthIndex = parseInt(currentMonthPrefix.split("-")[1]) - 1;
+            const bnMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+            const periodLabel = `${bnMonths[enMonthIndex]} - ${bnNum(enYear)}`;
+
+            let incomeHtml = "";
+            let expenseHtml = "";
+            let totalInc = 0;
+            let totalExp = 0;
+
+            monthEntries.forEach(item => {
+                if (item.type === "আয়") {
+                    totalInc += item.amount;
+                    incomeHtml += `
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 6px; font-family: monospace;">${bnNum(item.date)}</td>
+                            <td style="padding: 6px;">${item.category}</td>
+                            <td style="padding: 6px;">${item.description}</td>
+                            <td style="padding: 6px; text-align: right; font-family: monospace;">৳ ${bnNum(item.amount)}</td>
+                        </tr>
+                    `;
+                } else if (item.type === "ব্যয়") {
+                    totalExp += item.amount;
+                    expenseHtml += `
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 6px; font-family: monospace;">${bnNum(item.date)}</td>
+                            <td style="padding: 6px;">${item.category}</td>
+                            <td style="padding: 6px;">${item.description}</td>
+                            <td style="padding: 6px; text-align: right; font-family: monospace;">৳ ${bnNum(item.amount)}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            const printWin = window.open("", "_blank");
+            if (!printWin) {
+                return toast("পপআপ ব্লক করা হয়েছে! অনুগ্রহ করে পপআপ খোলার অনুমতি দিন।", "error");
+            }
+
+            printWin.document.write(`
+                <html>
+                <head>
+                    <title>আয়-ব্যয় ক্যাশ খতিয়ান প্রতিবদন - ${periodLabel}</title>
+                    <style>
+                        body { font-family: 'Arial', sans-serif; padding: 20px; color: #333; line-height: 1.4; font-size: 11px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                        th { background: #f3f3f3; border: 1px solid #ccc; padding: 6px; font-weight: bold; text-align: left; }
+                        td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+                        h2, h3 { margin: 4px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
+                        <h2>${S_local.cfg.madrasahName || 'মাদ্রাসার নাম'}</h2>
+                        <h4 style="margin: 3px 0;">আয়-ব্যয় খতিয়ান নিরীক্ষা প্রতিবেদন</h4>
+                        <strong>রিপোর্ট মাস: ${periodLabel} | ক্যাশ ব্যালেন্স উদ্বৃত্ত: ৳ <u>${bnNum(totalInc - totalExp)}</u></strong>
+                    </div>
+
+                    <div style="display: flex; gap: 20px;">
+                        <!-- Incomes Table -->
+                        <div style="flex: 1;">
+                            <h3 style="color: #0d532d; border-bottom: 2px solid #0d532d; padding-bottom: 4px;">প্রাপ্তি / আয় সমূহ</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>তারিখ</th>
+                                        <th>খাত</th>
+                                        <th>বিবরণ ও উৎস</th>
+                                        <th style="text-align: right;">টাকা</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${incomeHtml || '<tr><td colspan="4" style="text-align: center; color: #777;">কোনো প্রাপ্তি নেই</td></tr>'}
+                                    <tr style="font-weight: bold; background: #e6fced; border-top: 2px solid #0d532d;">
+                                        <td colspan="3">সর্বমোট আয়:</td>
+                                        <td style="text-align: right; font-family: monospace;">৳ ${bnNum(totalInc)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Expenses Table -->
+                        <div style="flex: 1;">
+                            <h3 style="color: #8c0d0d; border-bottom: 2px solid #8c0d0d; padding-bottom: 4px;">ব্যয় / খরচ সমূহ</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>তারিখ</th>
+                                        <th>খাত</th>
+                                        <th>বিবরণ ও খাত</th>
+                                        <th style="text-align: right;">টাকা</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${expenseHtml || '<tr><td colspan="4" style="text-align: center; color: #777;">কোনো ব্যয় নেই</td></tr>'}
+                                    <tr style="font-weight: bold; background: #fdf2f2; border-top: 2px solid #8c0d0d;">
+                                        <td colspan="3">সর্বমোট ব্যয়:</td>
+                                        <td style="text-align: right; font-family: monospace;">৳ ${bnNum(totalExp)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 40px; display: flex; justify-content: space-between; border-top: 1px dotted #ccc; padding-top: 15px; font-size: 10px;">
+                        <div>প্রস্তুতকারী স্বাক্ষর: ____________________</div>
+                        <div>হিসাবরক্ষক স্বাক্ষর: ____________________</div>
+                        <div>মুহতামিম স্বাক্ষর: ____________________</div>
+                    </div>
+
+                    \<script>
+                        window.onload = function() {
+                            window.print();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        }
+
         // --- 13B. FEES AND RECEIPT BOOK SYSTEM ---
         function generateReceiptNumber() {
             if (!S.cfg.receipt) S.cfg.receipt = { bookNo: "১", currentPage: "১", pageTotal: "১০০" };
@@ -5817,10 +6363,10 @@
                            "একুশ", "বাইশ", "তেইশ", "চব্বিশ", "পঁচিশ", "ছাব্বিশ", "সাতাশ", "আটাশ", "ঊনত্রিশ", "ত্রিশ",
                            "একত্রিশ", "বত্রিশ", "তেরত্রিশ", "চৌত্রিশ", "পঁয়ত্রিশ", "ছত্রিশ", "সাতত্রিশ", "আটত্রিশ", "ঊনচল্লিশ", "চল্লিশ"];
             
-            if (num <= 40) return words[num];
-            if (num < 100) {
+            if (!(num > 40)) return words[num];
+            if (!(num >= 100)) {
                 return bnNum(num) + " টাকা";
-            } else if (num < 1000) {
+            } else if (!(num >= 1000)) {
                 const hundreds = Math.floor(num / 100);
                 const rem = num % 100;
                 return (hundreds > 1 ? words[hundreds] : "") + "শত " + (rem > 0 ? convertNumberToBanglaWords(rem) : "");
@@ -5845,8 +6391,8 @@
                             <p class="text-slate-500 text-[11px] font-semibold">শিক্ষার্থীদের মাসিক বেতন গ্রহণ করুন এবং মেমো রশিদ জেনারেট করুন।</p>
                         </div>
                         <div class="flex border border-n7 rounded-xl overflow-hidden text-[11px] font-extrabold bg-slate-50 self-start md:self-center shrink-0">
-                            <button onclick="switchFeesTab('collect')" class="px-4 py-2 cursor-pointer transition ${window.activeFeesTab === "collect" ? "bg-p3 text-white" : "text-slate-500 hover:text-slate-800 bg-white"}" id="btn-fees-collect">নতুন ফি সংগ্রহ</button>
-                            <button onclick="switchFeesTab('history')" class="px-4 py-2 cursor-pointer transition ${window.activeFeesTab === "history" ? "bg-p3 text-white" : "text-slate-500 hover:text-slate-800 bg-white"}" id="btn-fees-history">ফি আদায়ের ইতিহাস</button>
+                            <button onclick="switchFeesTab('collect')" class="px-4 py-2 cursor-pointer transition" id="btn-fees-collect">নতুন ফি সংগ্রহ</button>
+                            <button onclick="switchFeesTab('history')" class="px-4 py-2 cursor-pointer transition" id="btn-fees-history">ফি আদায়ের ইতিহাস</button>
                         </div>
                     </div>
 
@@ -6121,7 +6667,7 @@
             const notes = document.getElementById("fc-notes").value.trim();
 
             if (!month) return toast("অনুগ্রহ করে বেতন ফি মাস নির্ধারণ করুন!", "error");
-            if (!amount || isNaN(parseInt(toEngNum(amount))) || parseInt(toEngNum(amount)) <= 0) {
+            if (!amount || isNaN(parseInt(toEngNum(amount))) || !(parseInt(toEngNum(amount)) > 0)) {
                 return toast("অনুগ্রহ করে সঠিক টাকার পরিমাণ প্রদান করুন!", "error");
             }
             if (!method) return toast("অনুগ্রহ করে পেমেন্ট পদ্ধতি পছন্দ করুন!", "error");
@@ -6556,14 +7102,14 @@
                             <div class="signature-line official">হিসাবরক্ষক</div>
                         </div>
                     </div>
-                    <script>
+                    \<script>
                         window.onload = function() {
                             window.print();
                             setTimeout(function() {
                                 window.close();
                             }, 500);
                         }
-                    </script>
+                    <\/script>
                 </body>
                 </html>
             `);
