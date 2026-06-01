@@ -402,10 +402,15 @@
                     if (!S.cfg.receipt) S.cfg.receipt = { bookNo: "১", currentPage: "৫", pageTotal: "১০০" };
                     if (!S.cfg.incomeCategories) S.cfg.incomeCategories = ["দান", "ফি", "সদস্য চাঁদা", "অন্যান্য"];
                     if (!S.cfg.expenseCategories) S.cfg.expenseCategories = ["শিক্ষক বেতন", "বোর্ডিং বাজার", "বিদ্যুৎ বিল", "গ্যাস বিল", "অন্যান্য"];
+                    if (!S.cfg.boardingCategories) S.cfg.boardingCategories = ["চাল", "ডাল", "তেল", "মসলা", "মাছ-মাংস", "অন্যান্য"];
                     if (!S.fees) S.fees = [];
                     if (!S.salaries) S.salaries = [];
                     if (!S.expenses) S.expenses = defaultS.expenses || [];
                     if (!S.userProfiles) S.userProfiles = {};
+                    if (!S.donors) S.donors = defaultS.donors || [];
+                    if (!S.donations) S.donations = defaultS.donations || [];
+                    if (!S.notices) S.notices = defaultS.notices || [];
+                    if (!S.boarding) S.boarding = defaultS.boarding || [];
                 } else {
                     S = JSON.parse(JSON.stringify(defaultS));
                     saveL();
@@ -1069,10 +1074,16 @@
                     renderAccountsModule(dest);
                     break;
                 case "boarding":
-                case "donors":
-                case "notice":
+                    renderBoardingModule(dest);
+                    break;
                 case "print":
                     renderModuleStub(view, dest);
+                    break;
+                case "donors":
+                    renderDonorsModule(dest);
+                    break;
+                case "notice":
+                    renderNoticeModule(dest);
                     break;
                 default:
                     renderStaffDashboard(dest);
@@ -1271,6 +1282,7 @@
             
             // Populate Notice lists in dashboard
             const noticeBox = document.getElementById("dash-notices-container");
+            noticeBox.innerHTML = "";
             const topNotices = S.notices.slice(0, 3);
             if (topNotices.length === 0) {
                 noticeBox.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">নোটিশ বোর্ডে কোনো তথ্য নেই</div>`;
@@ -1283,7 +1295,7 @@
                                 <span class="text-[9px] text-slate-400 font-mono">${bnNum(not.date)}</span>
                             </div>
                             <h4 class="text-xs font-bold text-slate-800 mt-1.5">${not.title}</h4>
-                            <p class="text-[11px] text-slate-600 mt-1 leading-relaxed">${not.content}</p>
+                            <p class="text-[11px] text-[#2c3e50] mt-1 leading-relaxed">${not.content}</p>
                         </div>
                     `;
                 });
@@ -1291,6 +1303,7 @@
 
             // Populate system logs inside dashboard list
             const logBox = document.getElementById("dash-logs-container");
+            logBox.innerHTML = "";
             const mergedLogs = [...(S.logs || [])];
             if (mergedLogs.length === 0) {
                 mergedLogs.push(
@@ -1978,6 +1991,2132 @@
                 "donors": "দাতা ও অনুদান", "notice": "নোটিশ ও মেসেজিং", "print": "রিপোর্ট প্রিন্ট সেন্টার"
             };
             return mapped[id] || id;
+        }
+
+
+        // ==========================================
+        // BOARDING KITCHEN MODULE (PHASE 9)
+        // ==========================================
+        function ensureBoardingModalsExist() {
+            if (!document.getElementById("boarding-voucher-modal")) {
+                const m = document.createElement("div");
+                m.id = "boarding-voucher-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[180] hidden items-center justify-center p-2 sm:p-4 overflow-y-auto";
+                document.body.appendChild(m);
+            }
+            if (!document.getElementById("boarding-view-modal")) {
+                const m = document.createElement("div");
+                m.id = "boarding-view-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[180] hidden items-center justify-center p-2 sm:p-4";
+                document.body.appendChild(m);
+            }
+        }
+
+        function genBoardingVoucherId() {
+            let maxNum = 0;
+            (S.boarding || []).forEach(v => {
+                if (v.id && v.id.startsWith('BV-')) {
+                    const num = parseInt(v.id.replace('BV-', ''));
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                }
+            });
+            return 'BV-' + String(maxNum + 1).padStart(2, '0');
+        }
+
+        function getBoardingKPIs() {
+            const todayStr = new Date().toISOString().substring(0, 10);
+            const thisMonthStr = todayStr.substring(0, 7); // e.g. "2026-06"
+            
+            if (!S.boarding) S.boarding = [];
+            
+            const resCountVal = S.students.filter(s => (s.resident === "হ্যাঁ" || s.resident === "হ্যা" || s.resident === "yes" || s.resident === "Yes") && s.status === "সক্রিয়").length;
+            
+            let todayVal = 0;
+            let monthVal = 0;
+            
+            S.boarding.forEach(v => {
+                let vDate = toEngNum(v.date || "").replace(/\//g, "-");
+                let normDateStr = "";
+                const parts = vDate.split("-");
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        normDateStr = vDate;
+                    } else if (parts[2].length === 4) {
+                        normDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                }
+                const vTotal = parseFloat(toEngNum(v.total) || 0);
+                if (normDateStr === todayStr) {
+                    todayVal += vTotal;
+                }
+                if (normDateStr.startsWith(thisMonthStr)) {
+                    monthVal += vTotal;
+                }
+            });
+            
+            return {
+                resStudentsCount: resCountVal,
+                todayExpense: todayVal,
+                monthExpense: monthVal,
+                vouchersCount: S.boarding.length
+            };
+        }
+
+        function syncBoardingVoucherToExpense(v) {
+            if (!S.expenses) S.expenses = [];
+            const expId = "EXP-BV-" + v.id;
+            const existingIndex = S.expenses.findIndex(e => e.id === expId);
+            
+            const itemsSummary = (v.items || []).map(it => `${it.name} (${bnNum(it.qty)} ${it.unit})`).join(", ");
+            const expenseDescription = `বোর্ডিং ভাউচার রসিদ #${bnNum(v.id)} (${v.category || v.type || "বাজার"}): ${itemsSummary}. ${v.notes || ''}`.substring(0, 180);
+            
+            const expensePayload = {
+                id: expId,
+                type: "ব্যয়",
+                date: v.date,
+                category: "বোর্ডিং বাজার",
+                amount: toEngNum(v.total),
+                description: expenseDescription,
+                reference: v.id
+            };
+            
+            if (existingIndex !== -1) {
+                S.expenses[existingIndex] = expensePayload;
+            } else {
+                S.expenses.unshift(expensePayload);
+            }
+        }
+
+        function removeBoardingVoucherExpense(voucherId) {
+            if (!S.expenses) S.expenses = [];
+            const expId = "EXP-BV-" + voucherId;
+            S.expenses = S.expenses.filter(e => e.id !== expId && e.reference !== voucherId);
+        }
+
+        function changeBoardingTab(tabId) {
+            window.activeBoardingTab = tabId;
+            renderBoardingModule(document.getElementById("active-panel-container"));
+        }
+
+        function updateBoardingFilters(key, val) {
+            window.boardingFilters[key] = val;
+            const contents = document.getElementById("boarding-tab-contents");
+            if (contents && window.activeBoardingTab === 'vouchers-tab') {
+                contents.innerHTML = renderBoardingVouchersSubTab();
+                lucide.createIcons();
+            }
+        }
+
+        function updateResidentFilters(key, val) {
+            window.residentFilters[key] = val;
+            const tbody = document.getElementById("resident-students-tbody");
+            if (tbody) {
+                tbody.innerHTML = renderResidentialStudentsTable(window.residentFilters.search, window.residentFilters.section, window.residentFilters.jamat);
+            }
+        }
+
+        function renderResidentialStudentsTable(searchQuery = "", divFilter = "", jamatFilter = "") {
+            let list = S.students.filter(s => (s.resident === "হ্যাঁ" || s.resident === "হ্যা" || s.resident === "yes" || s.resident === "Yes"));
+            
+            const q = searchQuery.trim().toLowerCase();
+            if (q) {
+                list = list.filter(s => 
+                    (s.name && s.name.toLowerCase().includes(q)) ||
+                    (s.id && s.id.toLowerCase().includes(q)) ||
+                    (s.phone && s.phone.includes(q))
+                );
+            }
+            if (divFilter) {
+                list = list.filter(s => s.section === divFilter);
+            }
+            if (jamatFilter) {
+                list = list.filter(s => s.jamat === jamatFilter);
+            }
+            
+            if (list.length === 0) {
+                return `
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-slate-400 font-bold text-xs bg-white rounded-xl">
+                            কোনো আবাসিক শিক্ষার্থী পাওয়া যায়নি।
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            return list.map(s => {
+                const isSgActive = s.status === "সক্রিয়";
+                return `
+                    <tr class="border-b border-n7 hover:bg-slate-50 transition text-xs font-semibold text-slate-705 font-medium">
+                        <td class="px-4 py-3 font-mono font-bold text-slate-500">${s.id}</td>
+                        <td class="px-4 py-3 font-extrabold text-slate-800 text-left">${s.name}</td>
+                        <td class="px-4 py-3 text-slate-600">${s.section}</td>
+                        <td class="px-4 py-3 font-bold text-[#0a6b38]">${s.jamat}</td>
+                        <td class="px-4 py-3 text-slate-500 font-mono">${bnNum(s.phone || '—')}</td>
+                        <td class="px-4 py-3 text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-slate-100 text-slate-600">${s.blood || '—'}</span></td>
+                        <td class="px-4 py-3block">
+                            <span class="px-2 py-0.5 text-[9px] font-extrabold rounded-full ${isSgActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-150' : 'bg-red-50 text-red-650 border border-red-150'}">
+                                ${s.status || 'সক্রিয়'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function renderBoardingModule(dest) {
+            window.activeBoardingTab = window.activeBoardingTab || "vouchers-tab";
+            window.boardingFilters = window.boardingFilters || { search: "", category: "", date: "" };
+            window.residentFilters = window.residentFilters || { search: "", section: "", jamat: "" };
+            
+            if (!S.boarding) S.boarding = [];
+
+            const kpis = getBoardingKPIs();
+
+            dest.innerHTML = `
+                <div class="space-y-5 animate-in fade-in duration-200">
+                    <!-- Top header layout -->
+                    <div class="bg-white border border-n7 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <h3 class="text-xs md:text-sm font-black text-slate-800 flex items-center gap-2">
+                                <i data-lucide="utensils" class="w-5 h-5 text-emerald-600"></i> বোর্ডিং কিচেন ড্যাশবোর্ড ও বাজার খতিয়ান
+                            </h3>
+                            <p class="text-slate-505 text-[11px] font-semibold">মাদ্রাসার আবাসিক ছাত্রদের ডাইনিং ও বোর্ডিং ব্যবস্থার প্রতিদিনের বাজার ভাউচার, ক্যাশ বুক ক্যাটাগরি এবং স্ট্যাটিস্টিক্স ট্র্যাকার।</p>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="openBoardingVoucherForm()" class="px-3.5 py-2.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5 transition select-none spin-on-click">
+                                <i data-lucide="plus-circle" class="w-4 h-4"></i> নতুন বাজার ভাউচার এন্ট্রি
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mini KPI Dashboard Grid -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white border border-n7 rounded-xl p-4 shadow-sm flex items-start gap-2.5">
+                            <div class="p-2 bg-emerald-50 rounded-lg text-[#0a6b38]"><i data-lucide="users" class="w-4 h-4 md:w-5 md:h-5"></i></div>
+                            <div>
+                                <span class="text-[9.5px] text-slate-450 font-bold block">আবাসিক ছাত্র-ছাত্রী</span>
+                                <span class="text-xs md:text-sm font-extrabold text-slate-800 font-mono">${bnNum(kpis.resStudentsCount)} জন</span>
+                                <span class="text-[8px] text-slate-400 block mt-0.5">মাদ্রাসায় অবস্থানরত</span>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-n7 rounded-xl p-4 shadow-sm flex items-start gap-2.5">
+                            <div class="p-2 bg-rose-50 rounded-lg text-rose-600"><i data-lucide="calendar" class="w-4 h-4 md:w-5 md:h-5"></i></div>
+                            <div>
+                                <span class="text-[9.5px] text-slate-450 font-bold block">বোর্ডিং খরচ (আজ)</span>
+                                <span class="text-xs md:text-sm font-extrabold text-[#0a6b38] font-mono">৳ ${bnNum(kpis.todayExpense.toFixed(0))}</span>
+                                <span class="text-[8px] text-rose-500 font-semibold block mt-0.5">আজকের মোট বাজার</span>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-n7 rounded-xl p-4 shadow-sm flex items-start gap-2.5">
+                            <div class="p-2 bg-indigo-50 rounded-lg text-indigo-650"><i data-lucide="file-text" class="w-4 h-4 md:w-5 md:h-5"></i></div>
+                            <div>
+                                <span class="text-[9.5px] text-slate-450 font-bold block">বোর্ডিং খরচ (মাসিক)</span>
+                                <span class="text-xs md:text-sm font-extrabold text-indigo-700 font-mono">৳ ${bnNum(kpis.monthExpense.toFixed(0))}</span>
+                                <span class="text-[8px] text-slate-400 block mt-0.5">চলতি ক্যালেন্ডার মাস</span>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-n7 rounded-xl p-4 shadow-sm flex items-start gap-2.5">
+                            <div class="p-2 bg-sky-50 rounded-lg text-sky-655"><i data-lucide="receipt" class="w-4 h-4 md:w-5 md:h-5"></i></div>
+                            <div>
+                                <span class="text-[9.5px] text-slate-450 font-bold block">মোট বাজার ভাউচার</span>
+                                <span class="text-xs md:text-sm font-extrabold text-slate-800 font-mono">${bnNum(kpis.vouchersCount)} টি</span>
+                                <span class="text-[8px] text-slate-400 block mt-0.5">মোট অনুমোদিত ভাউচার</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs Selector -->
+                    <div class="flex border-b border-n7 overflow-x-auto bg-white rounded-t-xl shadow-2xs">
+                        <button onclick="changeBoardingTab('vouchers-tab')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeBoardingTab === 'vouchers-tab' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="file-signature" class="w-4 h-4"></i> বাজার ভাউচার সমূহ
+                        </button>
+                        <button onclick="changeBoardingTab('residents-tab')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeBoardingTab === 'residents-tab' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="users" class="w-4 h-4"></i> আবাসিক শিক্ষার্থী খতিয়ান
+                        </button>
+                        <button onclick="changeBoardingTab('stats-tab')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeBoardingTab === 'stats-tab' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4"></i> বোর্ডিং খরচ পরিসংখ্যান
+                        </button>
+                    </div>
+
+                    <!-- Inner Tab Contents -->
+                    <div id="boarding-tab-contents" class="space-y-4">
+                        ${window.activeBoardingTab === 'vouchers-tab' ? renderBoardingVouchersSubTab() : (window.activeBoardingTab === 'residents-tab' ? renderResidentialStudentsSubTab() : renderBoardingStatsSubTab())}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // SUBTAB 1 - BOARDING VOUCHERS LIST
+        // ==========================================
+        function renderBoardingVouchersSubTab() {
+            const filters = window.boardingFilters;
+            const catsSet = new Set([...(S.cfg.boardingCategories || []), "বাজার", "গ্যাস", "বিদ্যুৎ", "পানি", "রান্নাঘর", "রক্ষণাবেক্ষণ", "অন্যান্য"]);
+            const boardingCats = Array.from(catsSet);
+
+            const filterBar = `
+                <div class="bg-white border border-n7 p-4 rounded-b-xl shadow-2xs -mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">খুঁজুন (ভাউচার আইডি বা মন্তব্য):</label>
+                        <div class="relative">
+                            <input type="text" oninput="updateBoardingFilters('search', this.value)" placeholder="যেমন: BV-01 বা চাল ডাল..." value="${filters.search}" class="w-full pl-8 pr-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                            <i data-lucide="search" class="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">ভাউচার ক্যাটাগরি ফিল্টার:</label>
+                        <select onchange="updateBoardingFilters('category', this.value)" class="w-full px-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                            <option value="">সকল ক্যাটাগরি</option>
+                            ${boardingCats.map(t => `<option value="${t}" ${filters.category === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">তারিখ ফিল্টার:</label>
+                        <input type="date" onchange="updateBoardingFilters('date', this.value)" value="${filters.date}" class="w-full px-3 py-1 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                    </div>
+                </div>
+            `;
+
+            let filtered = S.boarding || [];
+            
+            if (filters.search.trim()) {
+                const sVal = filters.search.trim().toLowerCase();
+                filtered = filtered.filter(v => 
+                    (v.id && v.id.toLowerCase().includes(sVal)) ||
+                    (v.notes && v.notes.toLowerCase().includes(sVal)) ||
+                    (v.createdBy && v.createdBy.toLowerCase().includes(sVal)) ||
+                    (v.category && v.category.toLowerCase().includes(sVal)) ||
+                    (v.type && v.type.toLowerCase().includes(sVal))
+                );
+            }
+            if (filters.category) {
+                filtered = filtered.filter(v => (v.category === filters.category) || (v.type === filters.category));
+            }
+            if (filters.date) {
+                filtered = filtered.filter(v => {
+                    let vDate = toEngNum(v.date || "").replace(/\//g, "-");
+                    let normDateStr = "";
+                    const parts = vDate.split("-");
+                    if (parts.length === 3) {
+                        if (parts[0].length === 4) normDateStr = vDate;
+                        else if (parts[2].length === 4) normDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                    return normDateStr === filters.date;
+                });
+            }
+
+            if (filtered.length === 0) {
+                return filterBar + `<div class="bg-white border rounded-xl p-8 text-center text-slate-400 text-xs font-bold">কোনো বোর্ডিং ভাউচার খুঁজে পাওয়া যায়নি।</div>`;
+            }
+
+            const rows = filtered.map(v => {
+                const itemsStr = (v.items || []).map(it => `${it.name} (${bnNum(it.qty)} ${it.unit || 'কেজি'})`).join(", ");
+                const totalVal = parseFloat(toEngNum(v.total) || 0);
+                return `
+                    <tr class="border-b border-n7 hover:bg-slate-50 transition text-xs font-semibold text-slate-705">
+                        <td class="px-3 py-3 font-mono font-bold text-slate-500 text-[10px]">${v.id}</td>
+                        <td class="px-3 py-3 font-mono font-bold text-slate-600 text-[11px]">${bnNum(v.date)}</td>
+                        <td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-100">${v.category || v.type || "বাজার"}</span></td>
+                        <td class="px-3 py-3 text-left max-w-xs md:max-w-md truncate text-slate-705 font-medium" title="${itemsStr}">${itemsStr || '—'}</td>
+                        <td class="px-3 py-3 font-bold text-[#0a6b38] font-mono text-right">৳ ${bnNum(totalVal.toFixed(0))}</td>
+                        <td class="px-3 py-3 text-slate-500 text-[11px]">${v.createdBy || "বোর্ডিং সুপার"}</td>
+                        <td class="px-3 py-3 text-right">
+                            <div class="flex gap-1.5 justify-end">
+                                <button onclick="viewBoardingVoucher('${v.id}')" title="বিস্তারিত দেখুন" class="p-1 px-1.5 bg-slate-50 border hover:bg-slate-100 text-slate-705 rounded-lg cursor-pointer transition"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="openBoardingVoucherForm('${v.id}')" title="এডিট করুন" class="p-1 px-1.5 bg-slate-50 border hover:bg-slate-100 text-slate-707 rounded-lg cursor-pointer transition"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="printBoardingVoucherPopup('${v.id}')" title="ভাউচার প্রিন্ট করুন" class="p-1 px-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg cursor-pointer transition"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="deleteBoardingVoucher('${v.id}')" title="ডিলিট করুন" class="p-1 px-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg cursor-pointer transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+
+            return filterBar + `
+                <div class="overflow-x-auto border border-n7 rounded-xl bg-white shadow-3xs">
+                    <table class="w-full text-xs text-left text-slate-500 border-collapse table-auto">
+                        <thead class="text-[10px] font-extrabold uppercase bg-slate-50 text-slate-600 border-b border-n7">
+                            <tr>
+                                <th class="px-3 py-3">ভাউচার আইডি</th>
+                                <th class="px-3 py-3">তারিখ</th>
+                                <th class="px-3 py-3">ভাউচার ক্যাটাগরি</th>
+                                <th class="px-3 py-3 text-left">আইটেম বিবরণী</th>
+                                <th class="px-3 py-3 text-right">মোট টাকা</th>
+                                <th class="px-3 py-3">দাখিলকারী</th>
+                                <th class="px-3 py-3 text-right">ম্যানেজ অ্যাকশন</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // SUBTAB 2 - RESIDENTIAL STUDENTS LIST
+        // ==========================================
+        function renderResidentialStudentsSubTab() {
+            const filters = window.residentFilters;
+            const classesList = Array.from(new Set(S.students.map(s => s.jamat))).filter(Boolean);
+
+            const filterBar = `
+                <div class="bg-white border border-n7 p-4 rounded-b-xl shadow-2xs -mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">খুঁজুন (নাম বা দাখেলা আইডি বা ফোন নম্বর):</label>
+                        <div class="relative">
+                            <input type="text" oninput="updateResidentFilters('search', this.value)" placeholder="যেমন: আহসান হাবিব..." value="${filters.search}" class="w-full pl-8 pr-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                            <i data-lucide="search" class="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">বিভাগ ফিল্টার:</label>
+                        <select onchange="updateResidentFilters('section', this.value)" class="w-full px-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                            <option value="">সকল বিভাগ</option>
+                            ${S.divisions.map(d => `<option value="${d}" ${filters.section === d ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">জামাত/শ্রেণী ফিল্টার:</label>
+                        <select onchange="updateResidentFilters('jamat', this.value)" class="w-full px-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                            <option value="">সকল শ্রেণী</option>
+                            ${classesList.map(j => `<option value="${j}" ${filters.jamat === j ? 'selected' : ''}>${j}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+
+            return filterBar + `
+                <div class="overflow-x-auto border border-n7 rounded-xl bg-white shadow-3xs">
+                    <table class="w-full text-xs text-left text-slate-500 border-collapse table-auto">
+                        <thead class="text-[10px] font-extrabold uppercase bg-slate-50 text-slate-600 border-b border-n7">
+                            <tr>
+                                <th class="px-4 py-3">দাখেলা আইডি</th>
+                                <th class="px-4 py-3">শিক্ষार्थियों নাম</th>
+                                <th class="px-4 py-3">বিভাগ</th>
+                                <th class="px-4 py-3">জামাত/শ্রেণী</th>
+                                <th class="px-4 py-3">অভিভাবক ফোন</th>
+                                <th class="px-4 py-3 text-center">রক্তের গ্রুপ</th>
+                                <th class="px-4 py-3">স্ট্যাটাস</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resident-students-tbody">
+                            ${renderResidentialStudentsTable(filters.search, filters.section, filters.jamat)}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // SUBTAB 3 - BOARDING STATS & GRAPHS
+        // ==========================================
+        function renderBoardingStatsSubTab() {
+            const stats = getBoardingStatistics();
+            return `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-2xl p-5 shadow-sm text-center">
+                        <div class="mx-auto w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center mb-3"><i data-lucide="calendar" class="w-5 h-5"></i></div>
+                        <span class="text-xs text-slate-500 font-bold block">আজকের মোট বোর্ডিং মূল্য</span>
+                        <div class="text-2xl font-black text-slate-800 font-mono mt-1">৳ ${bnNum(stats.today.toFixed(2))}</div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-semibold">আজকের ২৪ ঘণ্টার অনুমোদিত ভাউচার ট্র্যাকিং</p>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-sky-50 to-white border border-sky-100 rounded-2xl p-5 shadow-sm text-center">
+                        <div class="mx-auto w-10 h-10 rounded-full bg-sky-100 text-sky-850 flex items-center justify-center mb-3"><i data-lucide="history" class="w-5 h-5"></i></div>
+                        <span class="text-xs text-slate-500 font-bold block">গত ৭ দিনের বোর্ডিং মূল্য</span>
+                        <div class="text-2xl font-black text-slate-800 font-mono mt-1">৳ ${bnNum(stats.weekly.toFixed(2))}</div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-semibold">বিগত এক সপ্তাহের বাজার ও রান্না খরচ</p>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-2xl p-5 shadow-sm text-center">
+                        <div class="mx-auto w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mb-3"><i data-lucide="trending-up" class="w-5 h-5"></i></div>
+                        <span class="text-xs text-slate-500 font-bold block">চলতি মাসের সর্বমোট বোর্ডিং মূল্য</span>
+                        <div class="text-2xl font-black text-slate-800 font-mono mt-1">৳ ${bnNum(stats.monthly.toFixed(2))}</div>
+                        <p class="text-[10px] text-slate-400 mt-2 font-semibold">চলতি ক্যালেন্ডার মাসের মোট হিসাব</p>
+                    </div>
+                </div>
+
+                <div class="bg-white border rounded-xl p-5 shadow-3xs space-y-4">
+                    <h4 class="text-xs font-black text-[#1c2c3c] flex items-center gap-1.5"><i data-lucide="utensils" class="w-4 h-4 text-emerald-800"></i> বোর্ডিং ক্যাটাগরি অনুযায়ী সংক্ষেপ বিবরণী</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="border rounded-xl p-4 bg-slate-50/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-3">ক্যাটাগরি খরচ খতিয়ান</span>
+                            <div class="space-y-2.5 text-xs">
+                                ${renderBoardingCategoryStatsTable()}
+                            </div>
+                        </div>
+                        <div class="border rounded-xl p-4 flex flex-col justify-center bg-slate-50/50">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-3 text-center">খরচের অনুপাত বিশ্লেষণ</span>
+                            <div class="space-y-3">
+                                ${renderBoardingIndicatorBars()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBoardingCategoryStatsTable() {
+            const rawCats = ["চাল", "ডাল", "তেল", "মসলা", "মাছ-মাংস", "অন্যান্য", "বাজার", "গ্যাস", "বিদ্যুৎ", "পানি", "রান্নাঘর", "রক্ষণাবেক্ষণ"];
+            const catsSum = {};
+            rawCats.forEach(c => catsSum[c] = 0);
+
+            (S.boarding || []).forEach(v => {
+                const cat = v.category || v.type || "অন্যান্য";
+                const tot = parseFloat(toEngNum(v.total) || 0);
+                if (catsSum[cat] !== undefined) {
+                    catsSum[cat] += tot;
+                } else {
+                    catsSum[cat] = tot;
+                }
+            });
+
+            const sortedCats = Object.entries(catsSum).filter(it => it[1] > 0).sort((a,b) => b[1] - a[1]);
+            if (sortedCats.length === 0) {
+                return `<div class="text-center py-4 text-slate-400 text-xs font-bold">কোনো হিসাব এন্ট্রি নেই</div>`;
+            }
+
+            return sortedCats.map(([cat, val]) => `
+                <div class="flex justify-between items-center border-b pb-1.5 font-bold">
+                    <span class="text-slate-600 flex items-center gap-1.5"><i data-lucide="tag" class="w-3.5 h-3.5 text-slate-400"></i> ${cat}</span>
+                    <span class="font-mono text-emerald-800">৳ ${bnNum(val.toFixed(2))}</span>
+                </div>
+            `).join("");
+        }
+
+        function renderBoardingIndicatorBars() {
+            const rawCats = ["চাল", "ডাল", "তেল", "মসলা", "মাছ-মাংস", "অন্যান্য", "বাজার", "গ্যাস", "বিদ্যুৎ", "পানি", "রান্নাঘর", "রক্ষণাবেক্ষণ"];
+            const catsSum = {};
+            let total = 0;
+            rawCats.forEach(c => catsSum[c] = 0);
+
+            (S.boarding || []).forEach(v => {
+                const cat = v.category || v.type || "অন্যান্য";
+                const tot = parseFloat(toEngNum(v.total) || 0);
+                if (catsSum[cat] !== undefined) {
+                    catsSum[cat] += tot;
+                } else {
+                    catsSum[cat] = tot;
+                }
+                total += tot;
+            });
+
+            const activeCats = Object.entries(catsSum).filter(it => it[1] > 0);
+            if (activeCats.length === 0 || total === 0) {
+                return `<div class="text-center py-4 text-slate-400 text-xs font-bold">কোনো প্রগ্রেসবার চিত্র উপাত্ত নেই।</div>`;
+            }
+
+            return activeCats.map(([cat, val]) => {
+                const pct = Math.round((val / total) * 100);
+                return `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px] font-semibold text-slate-600">
+                            <span>${cat}</span>
+                            <span>${bnNum(pct)}%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-[#0a6b38] h-full" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function getBoardingStatistics() {
+            const todayStr = new Date().toISOString().substring(0, 10);
+            const thisMonthStr = todayStr.substring(0, 7); // e.g. "2026-06"
+            
+            if (!S.boarding) S.boarding = [];
+            
+            let todayTotal = 0;
+            let weeklyTotal = 0;
+            let monthlyTotal = 0;
+            
+            const todayMs = new Date(todayStr).getTime();
+            const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+            
+            S.boarding.forEach(v => {
+                let vDate = toEngNum(v.date || "").replace(/\//g, "-");
+                let normDateStr = "";
+                const parts = vDate.split("-");
+                if (parts.length === 3) {
+                    if (parts[0].length === 4) {
+                        normDateStr = vDate;
+                    } else if (parts[2].length === 4) {
+                        normDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                }
+                
+                const total = parseFloat(toEngNum(v.total) || 0);
+                if (normDateStr === todayStr) {
+                    todayTotal += total;
+                }
+                if (normDateStr.startsWith(thisMonthStr)) {
+                    monthlyTotal += total;
+                }
+                
+                if (normDateStr) {
+                    const vMs = new Date(normDateStr).getTime();
+                    if (!isNaN(vMs) && (todayMs - vMs) >= 0 && (todayMs - vMs) < oneWeekMs) {
+                        weeklyTotal += total;
+                    }
+                }
+            });
+            
+            return {
+                today: todayTotal,
+                weekly: weeklyTotal,
+                monthly: monthlyTotal
+            };
+        }
+
+        // ==========================================
+        // VOUCHER EDIT FORM MODAL WORKFLOW
+        // ==========================================
+        function openBoardingVoucherForm(voucherId = null) {
+            ensureBoardingModalsExist();
+            const modal = document.getElementById("boarding-voucher-modal");
+            let isEdit = false;
+            let v = { id: genBoardingVoucherId(), date: new Date().toISOString().substring(0, 10), category: "চাল", items: [], total: "0", notes: "", createdBy: S.user.name || "বোর্ডিং সুপার" };
+            
+            if (voucherId) {
+                const found = S.boarding.find(x => x.id === voucherId);
+                if (found) {
+                    const normalizedV = JSON.parse(JSON.stringify(found));
+                    v = {
+                        ...normalizedV,
+                        category: normalizedV.category || normalizedV.type || "চাল",
+                        createdBy: normalizedV.createdBy || "বোর্ডিং সুপার"
+                    };
+                    isEdit = true;
+                }
+            }
+
+            const catsSet = new Set([...(S.cfg.boardingCategories || []), "বাজার", "গ্যাস", "বিদ্যুৎ", "পানি", "রান্নাঘর", "রক্ষণাবেক্ষণ", "অন্যান্য"]);
+            const boardingCats = Array.from(catsSet);
+            
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col my-5 max-h-[92vh]">
+                    <div class="bg-gradient-to-r from-emerald-800 to-[#0a6b38] px-5 py-4 text-white flex justify-between items-center shrink-0">
+                        <span class="flex items-center gap-2 font-bold text-sm md:text-base">
+                            <i data-lucide="${isEdit ? 'edit-3' : 'plus-circle'}" class="w-5 h-5"></i>
+                            ${isEdit ? 'বাজার ভাউচার খতিয়ান সংশোধন' : 'নতুন মাল্টি-আইটেম বাজার ভাউচার অনুমোদন'}
+                        </span>
+                        <button onclick="closeBoardingVoucherModal()" class="hover:opacity-80 text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <form onsubmit="saveBoardingVoucherForm(event, ${isEdit ? `'${v.id}'` : 'null'})" class="p-5 flex-1 overflow-y-auto space-y-4 text-xs font-semibold text-slate-755 flex flex-col justify-between max-h-[75vh]">
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-slate-600 mb-1">ভাউচার নম্বর (অটো):</label>
+                                    <input type="text" value="${v.id}" class="w-full px-3 py-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-mono font-bold text-slate-500" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1">বাজারের তারিখ:</label>
+                                    <input type="date" id="vf-date" value="${toEngNum(v.date).substring(0, 10)}" required class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-p3">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-1">খরচ ক্যাটাগরি খতিয়ান:</label>
+                                    <select id="vf-category" required class="w-full px-3 py-2 border border-n7 rounded-lg bg-white text-xs font-bold focus:outline-none focus:ring-p3">
+                                        ${boardingCats.map(c => `<option value="${c}" ${v.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- MULTI-ITEM ENTRIES TABLE -->
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-805 text-xs font-black flex items-center gap-1"><i data-lucide="list-collapse" class="w-4 h-4 text-emerald-800"></i> ভাউচার আইটেম বিস্তারিত খতিয়ান:</span>
+                                    <button type="button" onclick="addVoucherItemRow()" class="px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-150 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-emerald-100 cursor-pointer transition select-none">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> আইটেম লাইন যোগ করুন
+                                    </button>
+                                </div>
+
+                                <div class="border rounded-xl spill-x overflow-y-auto max-h-[220px] bg-slate-50/20">
+                                    <table class="w-full text-xs text-left border-collapse table-auto md:min-w-[600px]">
+                                        <thead>
+                                            <tr class="bg-slate-100 text-slate-650 font-bold border-b text-[10.5px]">
+                                                <th class="p-2 w-[40%]">আইটেমের নাম</th>
+                                                <th class="p-2 w-[15%] text-center">পরিমাণ</th>
+                                                <th class="p-2 w-[15%]">ইউনিট</th>
+                                                <th class="p-2 w-[15%] text-right">দর (৳)</th>
+                                                <th class="p-2 w-[15%] text-right">মোট (৳)</th>
+                                                <th class="p-2 w-[5%] text-center">রিমুভ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="voucher-items-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                <div>
+                                    <label class="block text-slate-600 mb-1">দাখিলকারী কর্মচারীর নাম:</label>
+                                    <input type="text" id="vf-createdBy" value="${v.createdBy}" placeholder="যেমন: বোর্ডিং সুপারভাইজার" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                                </div>
+                                <div>
+                                    <label class="block text-slate-600 mb-2">সর্বমোট টাকার পরিমাণ (অটো):</label>
+                                    <div class="flex items-center gap-3">
+                                        <input type="text" id="v-grand-total" value="0.00" class="w-28 px-3 py-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-mono font-bold text-slate-500" readonly>
+                                        <span id="v-grand-total-bn" class="text-base font-extrabold text-[#0a6b38] font-mono">৳ ০.০০</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-slate-600 mb-1">সংक्षिप्त বিবরণ/ নোট মন্তব্য (ঐচ্ছিক):</label>
+                                <textarea id="vf-notes" placeholder="যেমন: সপ্তাহিক তরকারি ও মুদি মনিহারী ক্রয় ইত্যাদি..." class="w-full px-3 py-2 border border-n7 rounded-lg text-xs h-14 resize-none focus:outline-none focus:ring-p3 font-semibold">${v.notes || ''}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 justify-end pt-3 border-t shrink-0">
+                            <button type="button" onclick="closeBoardingVoucherModal()" class="px-5 py-2 hover:bg-slate-50 border border-n7 rounded-xl text-slate-500 cursor-pointer">বাতিল</button>
+                            <button type="submit" class="px-6 py-2 bg-[#0a6b38] hover:bg-[#07532b] text-white rounded-xl shadow cursor-pointer flex items-center gap-1.5 transition">
+                                <i data-lucide="check" class="w-4 h-4"></i> ভাউচার অনুমোদন ও সেভ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            
+            lucide.createIcons();
+            modal.style.display = "flex";
+
+            if (isEdit && v.items && v.items.length > 0) {
+                v.items.forEach(it => {
+                    addVoucherItemRow(it.name, it.qty, it.unit, it.price);
+                });
+            } else {
+                addVoucherItemRow();
+            }
+        }
+
+        function closeBoardingVoucherModal() {
+            document.getElementById("boarding-voucher-modal").style.display = "none";
+        }
+
+        function addVoucherItemRow(name="", qty="", unit="কেজি", price="") {
+            const tbody = document.getElementById("voucher-items-tbody");
+            if (!tbody) return;
+            
+            const rowId = "row-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5);
+            const tr = document.createElement("tr");
+            tr.id = rowId;
+            tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition";
+            
+            const units = [
+                { value: "কেজি", label: "কেজি (Kg)" },
+                { value: "গ্রাম", label: "গ্রাম (Gram)" },
+                { value: "লিটার", label: "লিটার (Liter)" },
+                { value: "টি", label: "টি (Piece)" },
+                { value: "প্যাকেট", label: "প্যাকেট (Packet)" },
+                { value: "বান্ডিল", label: "বান্ডিল (Bundle)" },
+                { value: "অন্যান্য", label: "অন্যান্য (Other)" }
+            ];
+            
+            const unitOptions = units.map(u => 
+                `<option value="${u.value}" ${u.value === unit ? 'selected' : ''}>${u.label}</option>`
+            ).join("");
+            
+            tr.innerHTML = `
+                <td class="p-2">
+                    <input type="text" class="v-item-name w-full px-2 py-1.5 border border-slate-200 rounded-md text-xs font-bold focus:ring-1 focus:ring-p3" value="${name}" required placeholder="যেমন: ডাল, তেল...">
+                </td>
+                <td class="p-2">
+                    <input type="number" step="any" class="v-item-qty w-full px-2 py-1.5 border border-slate-200 rounded-md text-xs font-mono font-bold text-center focus:ring-1 focus:ring-p3" value="${qty}" required placeholder="০" oninput="recalcVoucherGrandTotal()">
+                </td>
+                <td class="p-2">
+                    <select class="v-item-unit w-full px-2 py-1.5 border border-slate-200 bg-white rounded-md text-xs font-semibold focus:ring-1 focus:ring-p3">
+                        ${unitOptions}
+                    </select>
+                </td>
+                <td class="p-2">
+                    <input type="number" step="any" class="v-item-price w-full px-2 py-1.5 border border-slate-200 rounded-md text-xs font-mono font-bold text-right focus:ring-1 focus:ring-p3" value="${price}" required placeholder="০.০০" oninput="recalcVoucherGrandTotal()">
+                </td>
+                <td class="p-2 text-right">
+                    <input type="text" class="v-item-total w-full px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-md text-xs font-mono font-bold text-right text-slate-700" value="0" readonly>
+                </td>
+                <td class="p-2 text-center">
+                    <button type="button" onclick="removeVoucherItemRow('${rowId}')" class="p-1 px-1.5 hover:bg-rose-50 text-rose-550 border border-slate-250/20 hover:border-rose-100 rounded-lg cursor-pointer transition">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+            lucide.createIcons();
+            recalcVoucherGrandTotal();
+        }
+
+        function removeVoucherItemRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.remove();
+                recalcVoucherGrandTotal();
+            }
+        }
+
+        function recalcVoucherGrandTotal() {
+            const tbody = document.getElementById("voucher-items-tbody");
+            if (!tbody) return;
+            
+            const rows = tbody.querySelectorAll("tr");
+            let grandTotal = 0;
+            
+            rows.forEach(row => {
+                const qtyEl = row.querySelector(".v-item-qty");
+                const priceEl = row.querySelector(".v-item-price");
+                const totalEl = row.querySelector(".v-item-total");
+                
+                let qty = parseFloat(toEngNum(qtyEl ? qtyEl.value : "0")) || 0;
+                let price = parseFloat(toEngNum(priceEl ? priceEl.value : "0")) || 0;
+                let total = qty * price;
+                
+                if (totalEl) {
+                    totalEl.value = total.toFixed(2);
+                }
+                
+                grandTotal += total;
+            });
+            
+            const grandTotalEl = document.getElementById("v-grand-total");
+            if (grandTotalEl) {
+                grandTotalEl.value = grandTotal.toFixed(2);
+                const grandTotalBnEl = document.getElementById("v-grand-total-bn");
+                if (grandTotalBnEl) {
+                    grandTotalBnEl.innerText = "৳ " + bnNum(grandTotal.toFixed(2));
+                }
+            }
+        }
+
+        function saveBoardingVoucherForm(event, voucherId) {
+            event.preventDefault();
+            const date = document.getElementById("vf-date").value;
+            const category = document.getElementById("vf-category").value;
+            const createdBy = document.getElementById("vf-createdBy").value.trim() || S.user.name || "বোর্ডিং সুপার";
+            const notes = document.getElementById("vf-notes").value.trim();
+            
+            const tbody = document.getElementById("voucher-items-tbody");
+            const rows = tbody.querySelectorAll("tr");
+            
+            const items = [];
+            let isValid = true;
+            
+            rows.forEach(row => {
+                const nameEl = row.querySelector(".v-item-name");
+                const qtyEl = row.querySelector(".v-item-qty");
+                const unitEl = row.querySelector(".v-item-unit");
+                const priceEl = row.querySelector(".v-item-price");
+                
+                const name = nameEl ? nameEl.value.trim() : "";
+                const qty = parseFloat(toEngNum(qtyEl ? qtyEl.value : "")) || 0;
+                const unit = unitEl ? unitEl.value : "কেজি";
+                const price = parseFloat(toEngNum(priceEl ? priceEl.value : "")) || 0;
+                const total = qty * price;
+                
+                if (!name || qty <= 0 || price <= 0) {
+                    isValid = false;
+                } else {
+                    items.push({ name, qty: qty.toString(), unit, price: price.toString(), total: total.toFixed(2) });
+                }
+            });
+
+            if (items.length === 0 || !isValid) {
+                return toast("আইটেম বিবরণী সঠিকভাবে পূরণ করুন (আইটেমের নাম, পরিমাণ এবং দর শূন্যের বেশি হওয়া আবশ্যক)!", "error");
+            }
+
+            const grandTotal = items.reduce((sum, it) => sum + parseFloat(it.total), 0).toFixed(2);
+            
+            if (!S.boarding) S.boarding = [];
+
+            let savedVoucher;
+
+            if (voucherId) {
+                const idx = S.boarding.findIndex(x => x.id === voucherId);
+                if (idx !== -1) {
+                    S.boarding[idx] = {
+                        ...S.boarding[idx],
+                        date,
+                        category,
+                        items,
+                        total: grandTotal,
+                        notes,
+                        createdBy
+                    };
+                    savedVoucher = S.boarding[idx];
+                    toast("বোর্ডিং বাজার ভাউচার সফলভাবে সংশোধন করা হয়েছে।");
+                }
+            } else {
+                const newId = genBoardingVoucherId();
+                const newV = {
+                    id: newId,
+                    date,
+                    category,
+                    items,
+                    total: grandTotal,
+                    notes,
+                    createdBy
+                };
+                S.boarding.unshift(newV);
+                savedVoucher = newV;
+                toast("নতুন বোর্ডিং বাজার ভাউচার সফলভাবে পোস্টিং ও অনুমোদিত হয়েছে।");
+            }
+
+            if (savedVoucher) {
+                syncBoardingVoucherToExpense(savedVoucher);
+            }
+            
+            saveL();
+            closeBoardingVoucherModal();
+            renderBoardingModule(document.getElementById("active-panel-container"));
+        }
+
+        function deleteBoardingVoucher(voucherId) {
+            if (!confirm("আপনি কি নিশ্চিতভাবে এই বোর্ডিং বাজার ভাউচারটি মুছে ফেলতে চান? আয়ের ক্যাশ বুক থেকে এটি স্বয়ংক্রিয়ভাবে মুছে যাবে।")) return;
+            S.boarding = (S.boarding || []).filter(v => v.id !== voucherId);
+            removeBoardingVoucherExpense(voucherId);
+            saveL();
+            toast("বোর্ডিং ভাউচার এবং ক্যাশ বুকের খরচ বিবরণী মুছে ফেলা হয়েছে।");
+            renderBoardingModule(document.getElementById("active-panel-container"));
+        }
+
+        function viewBoardingVoucher(voucherId) {
+            ensureBoardingModalsExist();
+            const modal = document.getElementById("boarding-view-modal");
+            const v = S.boarding.find(x => x.id === voucherId);
+            if (!v) return toast("ভাউচার খুঁজে পাওয়া যায়নি!", "error");
+
+            const vTotal = parseFloat(toEngNum(v.total) || 0);
+
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[85vh]">
+                    <div class="bg-gradient-to-r from-[#0a6b38] to-[#0c4a27] px-5 py-4 text-white flex justify-between items-center shrink-0">
+                        <span class="flex items-center gap-2 font-bold text-sm md:text-base">
+                            <i data-lucide="receipt" class="w-5 h-5"></i> বাজার ভাউচার অনুমোদন বিবরণী
+                        </span>
+                        <button onclick="closeBoardingViewModal()" class="hover:opacity-80 text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="p-5 overflow-y-auto space-y-4 text-xs text-slate-705 font-semibold">
+                        <div class="grid grid-cols-2 gap-3 bg-slate-50 border p-3.5 rounded-xl">
+                            <div><span class="text-slate-405 block">ভাউচার নম্বর:</span> <span class="text-slate-800 font-mono font-bold">${v.id}</span></div>
+                            <div><span class="text-slate-405 block">বাজারের তারিখ:</span> <span class="text-slate-800 font-mono font-bold">${bnNum(v.date)}</span></div>
+                            <div><span class="text-slate-405 block">ক্যাটাগরি:</span> <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 inline-block mt-0.5">${v.category || v.type || "বাজার"}</span></div>
+                            <div><span class="text-slate-405 block">দাখিলকারী:</span> <span class="text-slate-800">${v.createdBy || "বোর্ডিং সুপার"}</span></div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <span class="text-slate-800 font-extrabold text-[11px] block">আইটেম সমূহের তালিকা:</span>
+                            <div class="border rounded-xl overflow-hidden spill-x">
+                                <table class="w-full text-xs text-left border-collapse table-auto">
+                                    <thead class="bg-slate-100 text-slate-650 font-bold border-b text-[10px]">
+                                        <tr>
+                                            <th class="p-2">আইটেমের নাম</th>
+                                            <th class="p-2 text-center border-l border-r border-slate-200">পরিমাণ</th>
+                                            <th class="p-2">ইউনিট</th>
+                                            <th class="p-2 text-right">দর (৳)</th>
+                                            <th class="p-2 text-right">মোট (৳)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${(v.items || []).map(it => {
+                                            const qty = parseFloat(toEngNum(it.qty) || 0);
+                                            const price = parseFloat(toEngNum(it.price) || 0);
+                                            const tot = parseFloat(toEngNum(it.total) || 0);
+                                            return `
+                                                <tr class="border-b text-[11px] hover:bg-slate-50/50">
+                                                    <td class="p-2 font-black text-slate-800">${it.name}</td>
+                                                    <td class="p-2 font-mono text-center border-l border-r border-slate-100 bg-slate-50/10">${bnNum(qty)}</td>
+                                                    <td class="p-2 text-slate-505 font-medium">${it.unit || 'কেজি'}</td>
+                                                    <td class="p-2 font-mono text-right">৳ ${bnNum(price.toFixed(0))}</td>
+                                                    <td class="p-2 font-extrabold text-[#0a6b38] font-mono text-right">৳ ${bnNum(tot.toFixed(0))}</td>
+                                                </tr>
+                                            `;
+                                        }).join("")}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center p-3 bg-emerald-50/50 border border-emerald-100 rounded-xl">
+                            <span class="text-slate-600 font-bold">ভাউচার মোট বাজার টাকা:</span>
+                            <span class="text-base font-extrabold text-[#0a6b38] font-mono">৳ ${bnNum(vTotal.toFixed(2))}</span>
+                        </div>
+
+                        ${v.notes ? `
+                            <div class="space-y-1">
+                                <span class="text-slate-404 block pb-0.5">সংক্ষিপ্ত নোট:</span>
+                                <div class="bg-white rounded-lg p-2.5 border text-slate-705 font-semibold leading-relaxed">${v.notes}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="bg-slate-50 px-5 py-3.5 border-t text-right flex gap-2 justify-end shrink-0">
+                        <button onclick="printBoardingVoucherPopup('${v.id}')" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold cursor-pointer transition flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="printer" class="w-4 h-4"></i> প্রিন্ট ভাউচার
+                        </button>
+                        <button onclick="closeBoardingViewModal()" class="px-4 py-2 bg-white hover:bg-slate-100 border border-n7 rounded-xl text-slate-600 font-bold cursor-pointer transition">বন্ধ করুন</button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            modal.style.display = "flex";
+        }
+
+        function closeBoardingViewModal() {
+            document.getElementById("boarding-view-modal").style.display = "none";
+        }
+
+        function printBoardingVoucherPopup(voucherId) {
+            const v = S.boarding.find(x => x.id === voucherId);
+            if (!v) return toast("ভাউচার খুঁজে পাওয়া যায়নি!", "error");
+            printBoardingVoucher(v);
+        }
+
+        function printBoardingVoucher(v) {
+            const logoBase64 = S.cfg.logo || "";
+            const logoHtml = logoBase64 
+                ? `<img src="${logoBase64}" style="max-height: 60px; margin-bottom: 5px;">` 
+                : `<div style="font-size: 28px; color: #0a6b38; margin-bottom: 5px;">🕌</div>`;
+
+            const printWin = window.open("", "_blank");
+            if (!printWin) {
+                alert("পপ-আপ উইন্ডো বা নতুন ট্যাব খুলতে ব্রাউজার অনুমতি দিন!");
+                return;
+            }
+
+            const rowsHtml = v.items.map((it, idx) => `
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${bnNum(idx + 1)}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">${it.name}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${bnNum(it.qty)}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${it.unit}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-family: monospace;">৳ ${bnNum(it.price)}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-family: monospace; font-weight: bold; color: #0a6b38;">৳ ${bnNum(it.total)}</td>
+                </tr>
+            `).join("");
+
+            printWin.document.write(`
+                <html>
+                <head>
+                    <title>বোর্ডিং ভাউচার - ${v.id}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+                        body {
+                            font-family: 'Hind Siliguri', 'Segoe UI', serif;
+                            padding: 45px;
+                            color: #333;
+                            background-color: #fff;
+                        }
+                        .container {
+                            border: 2px dashed #0a6b38;
+                            padding: 30px;
+                            border-radius: 12px;
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                        .header {
+                            text-align: center;
+                            border-bottom: 2px solid #0a6b38;
+                            padding-bottom: 15px;
+                            margin-bottom: 20px;
+                        }
+                        .header h1 {
+                            margin: 5px 0;
+                            color: #0a6b38;
+                            font-size: 24px;
+                        }
+                        .header p {
+                            margin: 3px 0;
+                            font-size: 13px;
+                            color: #666;
+                        }
+                        .meta-grid {
+                            display: grid;
+                            grid-template-cols: 1fr 1fr;
+                            gap: 15px;
+                            font-size: 13px;
+                            margin-bottom: 20px;
+                            background-color: #f9f9f9;
+                            padding: 15px;
+                            border-radius: 8px;
+                            border: 1px solid #eee;
+                        }
+                        .meta-item {
+                            margin-bottom: 5px;
+                        }
+                        .table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 25px;
+                            font-size: 13px;
+                        }
+                        .table th {
+                            background-color: #0a6b38;
+                            color: #fff;
+                            padding: 9px;
+                            border: 1px solid #0a6b38;
+                            text-align: left;
+                        }
+                        .table td {
+                            padding: 9px;
+                        }
+                        .grand-total-box {
+                            font-size: 15px;
+                            font-weight: bold;
+                            color: #0a6b38;
+                            display: flex;
+                            justify-content: flex-end;
+                            padding-right: 10px;
+                            margin-bottom: 40px;
+                        }
+                        .signatures {
+                            margin-top: 60px;
+                            display: grid;
+                            grid-template-cols: 1fr 1fr 1fr;
+                            gap: 20px;
+                            text-align: center;
+                            font-size: 11px;
+                            color: #555;
+                        }
+                        .sig-line {
+                            border-top: 1px solid #999;
+                            padding-top: 5px;
+                            margin: 0 15px;
+                        }
+                        @media print {
+                            body {
+                                padding: 20px;
+                            }
+                            .container {
+                                border: 1px dashed #000;
+                            }
+                        }
+                    </style>
+                </head>
+                <body onload="window.print()">
+                    <div class="container">
+                        <div class="header">
+                            ${logoHtml}
+                            <h1>${S.cfg.name || "দারুল উলুম মঈনুল ইসলাম"}</h1>
+                            <p>${S.cfg.address || "হাটহাজারী, চট্টগ্রাম"} | ফোন: ${bnNum(S.cfg.phone || "017xxxxxxxx")}</p>
+                            <div style="background-color: #0a6b38; color: #fff; display: inline-block; padding: 3px 15px; border-radius: 20px; font-weight: bold; font-size: 12px; margin-top: 10px; letter-spacing: 0.5px;">
+                                বোর্ডিং কিচেন খরচ ভাউচার
+                            </div>
+                        </div>
+
+                        <div class="meta-grid">
+                            <div>
+                                <div class="meta-item"><strong>ভাউচার নম্বর:</strong> <span style="font-family: monospace; font-weight: bold; color: #0a6b38; background-color: #e6f4ea; padding: 2px 6px; border-radius: 4px;">${v.id}</span></div>
+                                <div class="meta-item"><strong>ভাউচার ক্যাটাগরি:</strong> <span style="font-weight: bold;">${v.category || v.type || "বাজার"}</span></div>
+                            </div>
+                            <div>
+                                <div class="meta-item"><strong>তারিখ:</strong> <span style="font-family: monospace;">${bnNum(v.date)}</span></div>
+                                <div class="meta-item"><strong>দাখিলকারী:</strong> <span>${v.createdBy || "বোর্ডিং সুপারভাইজার"}</span></div>
+                            </div>
+                            <div style="grid-span: 2; grid-column: 1/3; border-top: 1px solid #eee; padding-top: 8px;">
+                                <strong>সংक्षिप्त নোট:</strong> <span>${v.notes || "কোনো নোট লেখা নেই।"}</span>
+                            </div>
+                        </div>
+
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: center; width: 60px;">ক্রমিক</th>
+                                    <th>আইটেমের নাম</th>
+                                    <th style="text-align: center; width: 80px;">পরিমাণ</th>
+                                    <th style="text-align: center; width: 80px;">ইউনিট</th>
+                                    <th style="text-align: right; width: 100px;">দর (৳)</th>
+                                    <th style="text-align: right; width: 120px;">মোট (৳)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+
+                        <div class="grand-total-box">
+                            <div style="border: 2px solid #0a6b38; padding: 8px 15px; border-radius: 8px; background-color: #e6f4ea;">
+                                সর্বমোট টাকার পরিমাণ: <span style="font-size: 18px; font-weight: 800; font-family: 'Courier New', monospace;">৳ ${bnNum(v.total)}</span>
+                            </div>
+                        </div>
+
+                        <div class="signatures">
+                            <div>
+                                <div class="sig-line">বোর্ডিং ম্যানেজার সিগনেচার</div>
+                            </div>
+                            <div>
+                                <div class="sig-line">হিসাবরক্ষক সিগনেচার</div>
+                            </div>
+                            <div>
+                                <div class="sig-line">মুহতামিম/অনুমোদনকারী</div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        }
+
+        // ==========================================
+        // DONORS & NOTICE MODULES (PHASE 10)
+        // ==========================================
+        function ensureDonorModalsExist() {
+            if (!document.getElementById("donor-form-modal")) {
+                const m = document.createElement("div");
+                m.id = "donor-form-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[180] hidden items-center justify-center p-2 sm:p-4";
+                document.body.appendChild(m);
+            }
+            if (!document.getElementById("donor-profile-modal")) {
+                const m = document.createElement("div");
+                m.id = "donor-profile-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[180] hidden items-center justify-center p-2 sm:p-4";
+                document.body.appendChild(m);
+            }
+            if (!document.getElementById("donation-form-modal")) {
+                const m = document.createElement("div");
+                m.id = "donation-form-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[180] hidden items-center justify-center p-2 sm:p-4";
+                document.body.appendChild(m);
+            }
+        }
+
+        function ensureNoticeModalsExist() {
+            if (!document.getElementById("notice-details-modal")) {
+                const m = document.createElement("div");
+                m.id = "notice-details-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[180] hidden items-center justify-center p-2 sm:p-4";
+                document.body.appendChild(m);
+            }
+        }
+
+        function genDonorId() {
+            let maxNum = 0;
+            (S.donors || []).forEach(d => {
+                if (d.id && d.id.startsWith('D-')) {
+                    const num = parseInt(d.id.replace('D-', ''));
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                }
+            });
+            return 'D-' + String(maxNum + 1).padStart(2, '0');
+        }
+
+        function genDonationId() {
+            let maxNum = 0;
+            (S.donations || []).forEach(dn => {
+                if (dn.id && dn.id.startsWith('DN-')) {
+                    const num = parseInt(dn.id.replace('DN-', ''));
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                }
+            });
+            return 'DN-' + String(maxNum + 1).padStart(2, '0');
+        }
+
+        function genNoticeId() {
+            let maxNum = 0;
+            (S.notices || []).forEach(n => {
+                if (n.id && n.id.startsWith('N-')) {
+                    const num = parseInt(n.id.replace('N-', ''));
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                }
+            });
+            return 'N-' + String(maxNum + 1).padStart(2, '0');
+        }
+
+        function getDonorTotalDonated(donorId) {
+            return (S.donations || [])
+                .filter(dn => dn.donorId === donorId)
+                .reduce((acc, curr) => acc + parseInt(toEngNum(curr.amount) || '0'), 0);
+        }
+
+        function getDonorLastDonationDate(donorId) {
+            const list = (S.donations || []).filter(dn => dn.donorId === donorId);
+            if (list.length === 0) return "নেই";
+            const sorted = [...list].sort((a, b) => b.date.localeCompare(a.date));
+            return sorted[0].date;
+        }
+
+        function changeDonorTab(tabId) {
+            window.activeDonorTab = tabId;
+            renderDonorsModule(document.getElementById("active-panel-container"));
+        }
+
+        function updateDonorFilters(key, val) {
+            window.donorFilters[key] = val;
+            const sub = document.getElementById("donor-tab-contents");
+            if (sub) {
+                sub.innerHTML = renderDonorsSubTab();
+                lucide.createIcons();
+            }
+        }
+
+        function updateDonationFilters(key, val) {
+            window.donationFilters[key] = val;
+            const sub = document.getElementById("donor-tab-contents");
+            if (sub) {
+                sub.innerHTML = renderDonationsSubTab();
+                lucide.createIcons();
+            }
+        }
+
+        function openDonorForm(donorId = null) {
+            ensureDonorModalsExist();
+            const modal = document.getElementById("donor-form-modal");
+            let isEdit = false;
+            let d = { id: genDonorId(), name: "", phone: "", address: "", type: "সাধারণ অনুদান", notes: "", status: "সক্রিয়" };
+            if (donorId) {
+                const found = S.donors.find(x => x.id === donorId);
+                if (found) { d = { ...found }; isEdit = true; }
+            }
+            const types = ["সাধারণ অনুদান", "এককালীন অনুদান", "সাপ্তাহিক সদস্য", "মাসিক সদস্য", "বার্ষিক সদস্য", "আজীবন সদস্য"];
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div class="bg-gradient-to-r from-emerald-800 to-[#0a6b38] px-5 py-4 text-white flex justify-between items-center">
+                        <span class="flex items-center gap-2 font-bold text-sm md:text-base">
+                            <i data-lucide="${isEdit ? 'edit-3' : 'user-plus'}" class="w-5 h-5"></i>
+                            ${isEdit ? 'দাতা সদস্য তথ্য সংশোধন' : 'নতুন দাতা সদস্য নিবন্ধন'}
+                        </span>
+                        <button onclick="closeDonorFormModal()" class="hover:opacity-80 text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <form onsubmit="saveDonorForm(event, ${isEdit ? `'${d.id}'` : 'null'})" class="p-5 space-y-4 text-xs font-semibold text-slate-750">
+                        <div>
+                            <label class="block text-slate-600 mb-1">দাতার নাম (অবশ্যই):</label>
+                            <input type="text" id="df-name" value="${d.name}" required placeholder="যেমন: আলহাজ্ব করিম উল্লাহ" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1">মোবাইল নম্বর (অবশ্যই):</label>
+                            <input type="text" id="df-phone" value="${d.phone}" required placeholder="যেমন: 017xxxxxxxx" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-p3">
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1">স্থায়ী ঠিকানা:</label>
+                            <input type="text" id="df-address" value="${d.address || ''}" placeholder="যেমন: ঢাকা" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-slate-600 mb-1">সদস্যপদের ধরণ:</label>
+                                <select id="df-type" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                                    ${types.map(t => `<option value="${t}" ${d.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 mb-1">স্ট্যাটাস:</label>
+                                <select id="df-status" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                                    <option value="সক্রিয়" ${d.status === 'সক্রিয়' ? 'selected' : ''}>সক্রিয়</option>
+                                    <option value="নিষ্ক্রিয়" ${d.status === 'নিষ্ক্রিয়' ? 'selected' : ''}>নিষ্ক্রিয়</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1">মন্তব্য (ঐচ্ছিক):</label>
+                            <textarea id="df-notes" placeholder="সংক্ষিপ্ত নোট..." class="w-full px-3 py-2 border border-n7 rounded-lg text-xs h-16 resize-none focus:outline-none focus:ring-p3">${d.notes || ''}</textarea>
+                        </div>
+                        <div class="flex gap-2 justify-end pt-3 border-t">
+                            <button type="button" onclick="closeDonorFormModal()" class="px-4 py-2 hover:bg-slate-50 border border-n7 rounded-xl text-slate-500 cursor-pointer">বাতিল</button>
+                            <button type="submit" class="px-5 py-2 bg-[#0a6b38] hover:bg-[#07532b] text-white rounded-xl shadow cursor-pointer flex items-center gap-1">
+                                <i data-lucide="check" class="w-4 h-4"></i> সংরক্ষণ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            lucide.createIcons();
+            modal.style.display = "flex";
+        }
+
+        function closeDonorFormModal() {
+            document.getElementById("donor-form-modal").style.display = "none";
+        }
+
+        function saveDonorForm(event, donorId) {
+            event.preventDefault();
+            const name = document.getElementById("df-name").value.trim();
+            const phone = document.getElementById("df-phone").value.trim();
+            const address = document.getElementById("df-address").value.trim();
+            const type = document.getElementById("df-type").value;
+            const status = document.getElementById("df-status").value;
+            const notes = document.getElementById("df-notes").value.trim();
+
+            if (!name || !phone) return toast("নাম ও মোবাইল নম্বর আবশ্যক!", "error");
+
+            if (!S.donors) S.donors = [];
+
+            if (donorId) {
+                const idx = S.donors.findIndex(x => x.id === donorId);
+                if (idx !== -1) {
+                    S.donors[idx] = { ...S.donors[idx], name, phone, address, type, status, notes };
+                    toast("দাতা বিবরণ আপডেট করা হয়েছে।");
+                }
+            } else {
+                S.donors.push({ id: genDonorId(), name, phone, address, type, status, notes });
+                toast("নতুন দাতা নিবন্ধিত হয়েছেন।");
+            }
+            saveL();
+            closeDonorFormModal();
+            renderDonorsModule(document.getElementById("active-panel-container"));
+        }
+
+        function openAddDonationModal(donorId = null) {
+            ensureDonorModalsExist();
+            const modal = document.getElementById("donation-form-modal");
+            const todayStr = new Date().toISOString().substring(0, 10);
+            const donorOptions = (S.donors || []).map(d => 
+                `<option value="${d.id}" ${d.id === donorId ? 'selected' : ''}>${d.name} (${d.id})</option>`
+            ).join('');
+
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div class="bg-gradient-to-r from-emerald-800 to-[#0a6b38] px-5 py-4 text-white flex justify-between items-center">
+                        <span class="flex items-center gap-2 font-bold text-sm md:text-base">
+                            <i data-lucide="coins" class="w-5 h-5"></i> নতুন অনুদান সংগ্রহ
+                        </span>
+                        <button onclick="closeDonationFormModal()" class="hover:opacity-80 text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <form onsubmit="saveDonationForm(event)" class="p-5 space-y-4 text-xs font-semibold text-slate-750">
+                        <div>
+                            <label class="block text-slate-600 mb-1">দাতা সদস্য নির্বাচন করুন:</label>
+                            <select id="dnf-donorId" required class="w-full px-3 py-2 border border-n7 rounded-lg bg-white text-xs font-bold focus:outline-none focus:ring-p3">
+                                <option value="" disabled ${!donorId ? 'selected' : ''}>সিলেক্ট দাতা</option>
+                                ${donorOptions}
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-slate-600 mb-1">টাকার পরিমাণ (৳):</label>
+                                <input type="number" id="dnf-amount" required placeholder="যেমন: ৫০০০" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-p3">
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 mb-1">তারিখ:</label>
+                                <input type="date" id="dnf-date" value="${todayStr}" required class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-p3">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1">পরিশোধ পদ্ধতি:</label>
+                            <select id="dnf-method" class="w-full px-3 py-2 border border-n7 rounded-lg bg-white text-xs font-bold focus:outline-none focus:ring-p3">
+                                <option value="ক্যাশ">ক্যাশ</option>
+                                <option value="বিকাশ">বিকাশ</option>
+                                <option value="নগদ">নগদ</option>
+                                <option value="রকেট">রকেট</option>
+                                <option value="ব্যাংক">ব্যাংক ট্রান্সফার</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1">সংক্ষিপ্ত বিবরণ (ঐচ্ছিক):</label>
+                            <input type="text" id="dnf-notes" placeholder="যেমন: সাধারণ দান" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3">
+                        </div>
+                        <div class="flex gap-2 justify-end pt-3 border-t">
+                            <button type="button" onclick="closeDonationFormModal()" class="px-4 py-2 hover:bg-slate-50 border border-n7 rounded-xl text-slate-500 cursor-pointer">বাতিল</button>
+                            <button type="submit" class="px-5 py-2 bg-[#0a6b38] hover:bg-[#07532b] text-white rounded-xl shadow cursor-pointer flex items-center gap-1">
+                                <i data-lucide="check" class="w-4 h-4"></i> রশিদ প্রিন্ট/সংরক্ষণ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+            lucide.createIcons();
+            modal.style.display = "flex";
+        }
+
+        function closeDonationFormModal() {
+            document.getElementById("donation-form-modal").style.display = "none";
+        }
+
+        function saveDonationForm(event) {
+            event.preventDefault();
+            const donorId = document.getElementById("dnf-donorId").value;
+            const amount = document.getElementById("dnf-amount").value.trim();
+            const date = document.getElementById("dnf-date").value;
+            const method = document.getElementById("dnf-method").value;
+            const notes = document.getElementById("dnf-notes").value.trim();
+
+            if (!donorId) return toast("দাতা নির্বাচন করুন!", "error");
+            if (!amount || isNaN(parseInt(toEngNum(amount))) || parseInt(toEngNum(amount)) <= 0) {
+                return toast("সঠিক পরিমাণ প্রদান করুন!", "error");
+            }
+
+            const amountEng = toEngNum(amount);
+            const donationId = genDonationId();
+            const expId = "INC-DN-" + donationId;
+            const donor = S.donors.find(d => d.id === donorId);
+            const donorName = donor ? donor.name : "অজ্ঞাত দাতা";
+
+            if (!S.donations) S.donations = [];
+
+            S.donations.unshift({ id: donationId, donorId, amount: amountEng, date, method, notes, expenseId: expId });
+
+            if (!S.expenses) S.expenses = [];
+            S.expenses.unshift({
+                id: expId,
+                type: "আয়",
+                date,
+                category: "দান",
+                amount: amountEng,
+                description: `দাতা অনুদান: ${donorName} (${donorId})`,
+                reference: donationId
+            });
+
+            logSystemActivity(`অনুদান রেকর্ড - ${donorName} - ৳ ${bnNum(amountEng)}`);
+            saveL();
+            closeDonationFormModal();
+            toast("অনুদানের টাকা ক্যাশ বুকে পোস্টিং এবং রসিদ সেভ করা হয়েছে।");
+            renderDonorsModule(document.getElementById("active-panel-container"));
+        }
+
+        function deleteDonor(donorId) {
+            if (!confirm("আপনি কি নিশ্চিতভাবে এই দাতা সদস্যকে ডিলিট করতে চান? তদ্সংশ্লিষ্ট সকল অনুদান রেকর্ড মুছে যাবে।")) return;
+            S.donors = (S.donors || []).filter(d => d.id !== donorId);
+            const myDns = (S.donations || []).filter(dn => dn.donorId === donorId);
+            myDns.forEach(dn => {
+                S.expenses = (S.expenses || []).filter(e => e.reference !== dn.id && e.id !== "INC-DN-" + dn.id);
+            });
+            S.donations = (S.donations || []).filter(dn => dn.donorId !== donorId);
+            logSystemActivity(`দাতা ডিলিট - ID: ${donorId}`);
+            saveL();
+            toast("দাতা সদস্য এবং সংশ্লিষ্ট হিসাবসমূহ সফলভাবে মুছে ফেলা হয়েছে।");
+            renderDonorsModule(document.getElementById("active-panel-container"));
+        }
+
+        function deleteDonation(donationId, isFromProfile = false, profileDonorId = null) {
+            if (!confirm("আপনি কি নিশ্চিতভাবে এই অনুদান রেকর্ড ডিলিট করতে চান? আয়ের ক্যাশ বুক থেকে এটি স্বয়ংক্রিয়ভাবে মুছে যাবে।")) return;
+            S.donations = (S.donations || []).filter(dn => dn.id !== donationId);
+            S.expenses = (S.expenses || []).filter(e => e.reference !== donationId && e.id !== "INC-DN-" + donationId);
+            logSystemActivity(`অনুদান রেকর্ড ডিলিট - ID: ${donationId}`);
+            saveL();
+            toast("অনুদান রেকর্ড সফলভাবে ডিলিট করা হয়েছে।");
+            if (isFromProfile && profileDonorId) {
+                openDonorProfile(profileDonorId);
+                renderDonorsModule(document.getElementById("active-panel-container"));
+            } else {
+                renderDonorsModule(document.getElementById("active-panel-container"));
+            }
+        }
+
+        function openDonorProfile(donorId) {
+            ensureDonorModalsExist();
+            const modal = document.getElementById("donor-profile-modal");
+            const d = S.donors.find(x => x.id === donorId);
+            if (!d) return toast("দাতা পাওয়া যায়নি!", "error");
+
+            const totalDonated = getDonorTotalDonated(donorId);
+            const lastDonationDate = getDonorLastDonationDate(donorId);
+            const myDonations = (S.donations || []).filter(dn => dn.donorId === donorId);
+
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+                    <div class="bg-gradient-to-r from-[#0a6b38] to-[#0c4a27] px-5 py-4 text-white flex justify-between items-center shrink-0">
+                        <span class="flex items-center gap-2 font-bold text-sm md:text-base">
+                            <i data-lucide="user" class="w-5 h-5"></i> সম্মানিত দাতা সদস্য প্রোফাইল
+                        </span>
+                        <button onclick="closeDonorProfileModal()" class="hover:opacity-80 text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="p-5 space-y-4 overflow-y-auto text-xs text-slate-700">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                                <span class="bg-emerald-50 text-[#0a6b38] border border-emerald-100 px-2 py-0.5 rounded-full text-[9px] font-bold inline-block mb-1">সর্বমোট দান</span>
+                                <div class="text-lg md:text-xl font-extrabold text-[#0a6b38] font-mono">৳ ${bnNum(totalDonated)}</div>
+                                <span class="text-[9px] text-slate-400 block mt-0.5">মোট ${bnNum(myDonations.length)} বার দান করেছেন</span>
+                            </div>
+                            <div class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+                                <span class="bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 rounded-full text-[9px] font-bold inline-block mb-1">সর্বশেষ অনুদান</span>
+                                <div class="text-xs md:text-sm font-bold text-slate-800 font-mono py-1.5">${lastDonationDate === 'নেই' ? 'কোনো অনুদান নেই' : bnNum(lastDonationDate)}</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50/50 border border-slate-100 rounded-xl p-4 space-y-2">
+                            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                                <span class="font-extrabold text-slate-800 text-sm flex items-center gap-1">
+                                    <i data-lucide="heart" class="w-4 h-4 text-rose-500 fill-rose-500"></i> ${d.name}
+                                </span>
+                                <span class="px-2 py-0.5 text-[8.5px] rounded bg-emerald-50 text-[#0a6b38] border border-emerald-100 font-bold">${d.type}</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] font-semibold">
+                                <div><span class="text-slate-400">আইডি:</span> <span class="text-slate-700 font-mono font-bold">${d.id}</span></div>
+                                <div><span class="text-slate-400">মোবাইল:</span> <span class="text-slate-700 font-mono font-bold">${bnNum(d.phone)}</span></div>
+                                <div class="md:col-span-2"><span class="text-slate-400">ঠিকানা:</span> <span class="text-slate-700">${d.address || 'তথ্য নেই'}</span></div>
+                                <div class="md:col-span-2"><span class="text-slate-400">স্ট্যাটাস:</span> <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${d.status === 'সক্রিয়' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">${d.status}</span></div>
+                                <div class="md:col-span-2"><span class="text-slate-400">মন্তব্য:</span> <span class="text-slate-600 block bg-white rounded p-2 border mt-1 font-semibold">${d.notes || 'কোনো মন্তব্য নেই'}</span></div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <h4 class="text-[11px] font-bold text-slate-805 flex items-center gap-1"><i data-lucide="history" class="w-4 h-4 text-slate-500"></i> পূর্ববর্তী দানের তালিকা</h4>
+                            ${myDonations.length === 0 ? `
+                                <div class="text-center py-6 text-slate-400">কোনো পূর্ববর্তী অনুদান নেই</div>
+                            ` : `
+                                <div class="overflow-x-auto border rounded-xl bg-white max-h-[160px] overflow-y-auto">
+                                    <table class="w-full text-[10.5px] text-slate-500 border-collapse table-auto">
+                                        <thead class="bg-slate-50 text-slate-600 border-b">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left">আইডি</th>
+                                                <th class="px-3 py-2">তারিখ</th>
+                                                <th class="px-3 py-2">টাকা</th>
+                                                <th class="px-3 py-2">মাধ্যম</th>
+                                                <th class="px-3 py-2 text-right">ডিলিট</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${myDonations.map(dn => `
+                                                <tr class="border-b hover:bg-slate-50">
+                                                    <td class="px-3 py-2 font-mono text-slate-400 text-[9px]">${dn.id}</td>
+                                                    <td class="px-3 py-2 font-mono text-slate-600">${bnNum(dn.date)}</td>
+                                                    <td class="px-3 py-2 font-bold text-[#0a6b38] font-mono">৳ ${bnNum(dn.amount)}</td>
+                                                    <td class="px-3 py-2 text-slate-600">${dn.method || 'ক্যাশ'}</td>
+                                                    <td class="px-3 py-2 text-right">
+                                                        <button onclick="deleteDonation('${dn.id}', true, '${d.id}')" class="text-rose-600 hover:text-rose-800 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-5 py-3 border-t text-right shrink-0">
+                        <button onclick="closeDonorProfileModal()" class="px-5 py-2 hover:bg-slate-100 bg-white border border-n7 rounded-xl text-slate-600 font-extrabold cursor-pointer transition">বন্ধ করুন</button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            modal.style.display = "flex";
+        }
+
+        function closeDonorProfileModal() {
+            document.getElementById("donor-profile-modal").style.display = "none";
+        }
+
+        function renderDonorsModule(dest) {
+            window.activeDonorTab = window.activeDonorTab || "donors-list";
+            window.donorFilters = window.donorFilters || { search: "", type: "", view: "card" };
+            window.donationFilters = window.donationFilters || { search: "" };
+
+            dest.innerHTML = `
+                <div class="space-y-5 animate-in fade-in duration-200">
+                    <div class="bg-white border border-n7 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <h3 class="text-xs md:text-sm font-black text-slate-800 flex items-center gap-2">
+                                <i data-lucide="heart" class="w-5 h-5 text-rose-500 fill-rose-500"></i> সম্মানিত দাতা সদস্য ও অনুদান খতিয়ান
+                            </h3>
+                            <p class="text-slate-500 text-[11px] font-semibold">মাদ্রাসার সম্মানিত দাতাদের তথ্য সংগ্রহ, নিয়মিত সদস্য চাঁদা এবং দান রশিদ ট্র্যাকিং পোর্টাল।</p>
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="openDonorForm()" class="px-3.5 py-2.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5 transition select-none spin-on-click">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i> নতুন দাতা সদস্য নিবন্ধন
+                            </button>
+                            <button onclick="openAddDonationModal()" class="px-3.5 py-2.5 hover:bg-emerald-50 border border-emerald-200 text-p3 text-xs font-bold rounded-xl shadow-xs bg-white cursor-pointer flex items-center gap-1.5 transition select-none spin-on-click">
+                                <i data-lucide="coins" class="w-4 h-4"></i> নতুন অনুদান সংগ্রহ
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex border-b border-n7 overflow-x-auto bg-white rounded-t-xl shadow-2xs">
+                        <button onclick="changeDonorTab('donors-list')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeDonorTab === 'donors-list' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="users" class="w-4 h-4"></i> দাতা সদস্য তালিকা ও প্রোফাইল
+                        </button>
+                        <button onclick="changeDonorTab('donations-list')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeDonorTab === 'donations-list' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="history" class="w-4 h-4"></i> অনুদান সংগ্রহের রেজিস্টার
+                        </button>
+                    </div>
+
+                    <div id="donor-tab-contents" class="space-y-4">
+                        ${window.activeDonorTab === 'donors-list' ? renderDonorsSubTab() : renderDonationsSubTab()}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderDonorsSubTab() {
+            const filters = window.donorFilters;
+            const mTypes = ["সাধারণ অনুদান", "এককালীন অনুদান", "সাপ্তাহিক সদস্য", "মাসিক সদস্য", "বার্ষিক সদস্য", "আজীবন সদস্য"];
+
+            const filterBar = `
+                <div class="bg-white border border-n7 p-4 rounded-b-xl shadow-2xs -mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">খুঁজুন (নাম বা মোবাইল নম্বর):</label>
+                        <div class="relative">
+                            <input type="text" oninput="updateDonorFilters('search', this.value)" placeholder="যেমন: আলহাজ্ব করিম..." value="${filters.search}" class="w-full pl-8 pr-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                            <i data-lucide="search" class="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-600">সদস্যপদের ধরণ ফিল্টার:</label>
+                        <select onchange="updateDonorFilters('type', this.value)" class="w-full px-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                            <option value="">সকল সদস্য ধরণের দাতা</option>
+                            ${mTypes.map(t => `<option value="${t}" ${filters.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="space-y-1 flex flex-col justify-end">
+                        <div class="flex gap-1 bg-slate-100 p-1 border rounded-lg self-stretch">
+                            <button onclick="updateDonorFilters('view', 'card')" class="flex-1 py-1 text-[10.5px] font-bold flex items-center justify-center gap-1 rounded cursor-pointer ${filters.view === 'card' ? 'bg-white text-p3 shadow-2xs' : 'text-slate-500'}">
+                                <i data-lucide="grid" class="w-3.5 h-3.5"></i> কার্ড ভিউ
+                            </button>
+                            <button onclick="updateDonorFilters('view', 'table')" class="flex-1 py-1 text-[10.5px] font-bold flex items-center justify-center gap-1 rounded cursor-pointer ${filters.view === 'table' ? 'bg-white text-p3 shadow-2xs' : 'text-slate-500'}">
+                                <i data-lucide="list" class="w-3.5 h-3.5"></i> টেবিল ভিউ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let filtered = S.donors || [];
+            const sVal = filters.search.trim().toLowerCase();
+            if (sVal) {
+                filtered = filtered.filter(d => 
+                    (d.name && d.name.toLowerCase().includes(sVal)) ||
+                    (d.phone && d.phone.includes(sVal)) ||
+                    (d.id && d.id.toLowerCase().includes(sVal))
+                );
+            }
+            if (filters.type) filtered = filtered.filter(d => d.type === filters.type);
+
+            if (filtered.length === 0) {
+                return filterBar + `<div class="bg-white border rounded-xl p-8 text-center text-slate-400 text-xs font-bold">কোনো দাতার তথ্য পাওয়া যায়নি।</div>`;
+            }
+
+            if (filters.view === "card") {
+                const cards = filtered.map(d => {
+                    const sum = getDonorTotalDonated(d.id);
+                    const last = getDonorLastDonationDate(d.id);
+                    return `
+                        <div class="bg-white border border-n7 rounded-xl p-4 shadow-2xs flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-[9px] text-slate-400 font-mono font-bold">${d.id}</span>
+                                    <span class="px-1.5 py-0.5 rounded text-[8.5px] font-bold ${d.status === 'سক্রিয়' || d.status === 'সক্রিয়' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}">${d.status || 'সক্রিয়'}</span>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <h4 class="text-xs font-black text-slate-805">${d.name}</h4>
+                                    <div class="text-[10px] text-slate-400 font-bold">${d.type}</div>
+                                </div>
+                                <div class="pt-2 border-t border-slate-100 space-y-1.5 text-[10.5px] font-semibold text-slate-650">
+                                    <div class="flex items-center gap-1.5"><i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i> ${bnNum(d.phone)}</div>
+                                    <div class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i> <span class="truncate max-w-[170px]">${d.address || '—'}</span></div>
+                                </div>
+                                <div class="mt-2.5 p-2 bg-slate-50/70 border border-slate-100 rounded-lg flex justify-between items-center text-[9.5px]">
+                                    <div>
+                                        <span class="text-slate-400 block font-bold">মোট অনুদান</span>
+                                        <span class="text-emerald-700 font-extrabold font-mono text-[11px]">৳ ${bnNum(sum)}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-slate-400 block font-bold">সর্বশেষ প্রাপ্তি</span>
+                                        <span class="text-slate-600 font-mono font-bold">${last === 'নেই' ? '—' : bnNum(last)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-4 gap-1">
+                                <button onclick="openDonorProfile('${d.id}')" title="প্রোফাইল" class="py-1.5 hover:bg-emerald-50 text-slate-600 hover:text-p3 border rounded-lg text-center flex items-center justify-center cursor-pointer transition">
+                                    <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="openAddDonationModal('${d.id}')" title="অনুদান সংগ্রহ" class="py-1.5 hover:bg-emerald-50 text-slate-600 hover:text-p3 border rounded-lg text-center flex items-center justify-center cursor-pointer transition">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="openDonorForm('${d.id}')" title="এডিট" class="py-1.5 hover:bg-emerald-50 text-slate-600 hover:text-p3 border rounded-lg text-center flex items-center justify-center cursor-pointer transition">
+                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="deleteDonor('${d.id}')" title="ডিলিট" class="py-1.5 hover:bg-rose-50 text-slate-550 hover:text-rose-600 border rounded-lg text-center flex items-center justify-center cursor-pointer transition">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                return filterBar + `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">${cards}</div>`;
+            } else {
+                return filterBar + `
+                    <div class="overflow-x-auto border border-n7 rounded-xl bg-white shadow-3xs">
+                        <table class="w-full text-xs text-left text-slate-500 border-collapse table-auto">
+                            <thead class="text-[10px] font-extrabold uppercase bg-slate-50 text-slate-600 border-b border-n7">
+                                <tr>
+                                    <th class="px-4 py-3">আইডি</th>
+                                    <th class="px-4 py-3">দাতার নাম</th>
+                                    <th class="px-4 py-3">সদস্য ধরণ</th>
+                                    <th class="px-4 py-3">মোবাইল</th>
+                                    <th class="px-4 py-3 text-right">সর্বমোট অনুদান</th>
+                                    <th class="px-4 py-3 text-center">শেষ অনুদান</th>
+                                    <th class="px-4 py-3">স্ট্যাটাস</th>
+                                    <th class="px-4 py-3 text-right">ম্যানেজ অ্যাকশন</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filtered.map(d => `
+                                    <tr class="border-b border-n7 hover:bg-slate-50">
+                                        <td class="px-4 py-3 text-slate-500 font-mono text-[9px] font-bold">${d.id}</td>
+                                        <td class="px-4 py-3 font-extrabold text-[#0a6b38] text-xs">${d.name}</td>
+                                        <td class="px-4 py-3 font-semibold text-slate-600 text-[10.5px]">${d.type}</td>
+                                        <td class="px-4 py-3 font-mono text-xs font-bold">${bnNum(d.phone)}</td>
+                                        <td class="px-4 py-3 font-bold text-emerald-800 font-mono text-right">৳ ${bnNum(getDonorTotalDonated(d.id))}</td>
+                                        <td class="px-4 py-3 font-mono text-[10px] text-slate-500 text-center">${getDonorLastDonationDate(d.id) === 'নেই' ? '—' : bnNum(getDonorLastDonationDate(d.id))}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-1.5 py-0.5 rounded text-[8px] font-bold ${d.status === 'سক্রিয়' || d.status === 'সক্রিয়' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'}">${d.status || 'সক্রিয়'}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <div class="flex gap-1 justify-end">
+                                                <button onclick="openDonorProfile('${d.id}')" class="p-1.5 bg-slate-50 border hover:bg-slate-100 text-slate-700 rounded cursor-pointer"><i data-lucide="user" class="w-3.5 h-3.5"></i></button>
+                                                <button onclick="openAddDonationModal('${d.id}')" class="p-1.5 bg-[#0a6b38] hover:bg-[#07532b] text-white rounded cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                                                <button onclick="openDonorForm('${d.id}')" class="p-1.5 bg-slate-50 border hover:bg-slate-100 text-slate-755 rounded cursor-pointer"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                                                <button onclick="deleteDonor('${d.id}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
+
+        function renderDonationsSubTab() {
+            const filters = window.donationFilters;
+            const filterBar = `
+                <div class="bg-white border border-n7 p-4 rounded-b-xl shadow-2xs -mt-5 flex flex-col md:flex-row gap-3">
+                    <div class="space-y-1 flex-1">
+                        <label class="block text-[10px] font-bold text-slate-600">অনুদান রসিদ খুঁজুন (দাতা নাম বা আইডি বা মেমো নং):</label>
+                        <div class="relative">
+                            <input type="text" oninput="updateDonationFilters('search', this.value)" placeholder="যেমন: আব্দুর রহমান..." value="${filters.search}" class="w-full pl-8 pr-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                            <i data-lucide="search" class="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let filtered = S.donations || [];
+            const sVal = filters.search.trim().toLowerCase();
+            if (sVal) {
+                filtered = filtered.filter(dn => {
+                    const d = S.donors.find(x => x.id === dn.donorId);
+                    const dName = d ? d.name.toLowerCase() : "";
+                    return dName.includes(sVal) || dn.donorId.toLowerCase().includes(sVal) || dn.id.toLowerCase().includes(sVal);
+                });
+            }
+
+            if (filtered.length === 0) {
+                return filterBar + `<div class="bg-white border rounded-xl p-8 text-center text-slate-400 text-xs font-bold">কোনো দানের রেকর্ড পাওয়া যায়নি।</div>`;
+            }
+
+            return filterBar + `
+                <div class="overflow-x-auto border border-n7 rounded-xl bg-white shadow-3xs">
+                    <table class="w-full text-xs text-left text-slate-500 border-collapse table-auto">
+                        <thead class="text-[10px] font-extrabold uppercase bg-slate-50 text-slate-600 border-b border-n7">
+                            <tr>
+                                <th class="px-4 py-3">মেমো আইডি</th>
+                                    <th class="px-4 py-3">দাতা সদস্য</th>
+                                    <th class="px-4 py-3">দানের তারিখ</th>
+                                    <th class="px-4 py-3 text-right">পরিমাণ (৳)</th>
+                                    <th class="px-4 py-3 text-center">পেমেন্ট মাধ্যম</th>
+                                    <th class="px-4 py-3">মন্তব্য/নোট</th>
+                                    <th class="px-4 py-3 text-right">অ্যাকশন</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filtered.map(dn => {
+                                const d = S.donors.find(x => x.id === dn.donorId);
+                                return `
+                                    <tr class="border-b border-n7 hover:bg-slate-50">
+                                        <td class="px-4 py-3 text-slate-400 font-mono text-[9px] font-bold">${dn.id}</td>
+                                        <td class="px-4 py-3">
+                                            <div class="font-bold text-slate-800">${d ? d.name : "অজ্ঞাত দাতা"}</div>
+                                            <div class="text-[8.5px] text-slate-400 font-mono">আইডি: ${dn.donorId}</div>
+                                        </td>
+                                        <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-705">${bnNum(dn.date)}</td>
+                                        <td class="px-4 py-3 font-extrabold text-emerald-800 font-mono text-right">৳ ${bnNum(dn.amount)}</td>
+                                        <td class="px-4 py-3 text-center"><span class="bg-emerald-50 text-emerald-800 font-bold border border-emerald-100 px-2 py-0.5 rounded text-[10.5px]">${dn.method || 'ক্যাশ'}</span></td>
+                                        <td class="px-4 py-3 text-slate-500 italic max-w-xs truncate">${dn.notes || '—'}</td>
+                                        <td class="px-4 py-3 text-right">
+                                            <button onclick="deleteDonation('${dn.id}')" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded cursor-pointer transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function changeNoticeTab(tabId) {
+            window.activeNoticeTab = tabId;
+            renderNoticeModule(document.getElementById("active-panel-container"));
+        }
+
+        function updateNoticeFilters(key, val) {
+            window.noticeFilters = window.noticeFilters || { search: "", type: "", target: "" };
+            window.noticeFilters[key] = val;
+            const container = document.getElementById("notice-list-container");
+            if (container) {
+                container.innerHTML = renderNoticeListItems();
+                lucide.createIcons();
+            }
+        }
+
+        function renderNoticeModule(dest) {
+            window.activeNoticeTab = window.activeNoticeTab || "notice-list";
+            window.noticeFilters = window.noticeFilters || { search: "", type: "", target: "" };
+
+            dest.innerHTML = `
+                <div class="space-y-5 animate-in fade-in duration-200">
+                    <div class="bg-white border border-n7 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <h3 class="text-xs md:text-sm font-black text-slate-800 flex items-center gap-2">
+                                <i data-lucide="megaphone" class="w-5 h-5 text-red-500"></i> মাদ্রাসার অফিশিয়াল নোটিশ ও SMS পোর্টাল
+                            </h3>
+                            <p class="text-slate-500 text-[11px] font-semibold">শিক্ষক, অভিভাবক ও ছাত্রদের নোটিশ বোর্ডের মাধ্যমে খবর পৌঁছানো ও ডেমো SMS ট্র্যাকিং পোর্টাল।</p>
+                        </div>
+                        <button onclick="changeNoticeTab('publish-notice')" class="px-4 py-2.5 bg-[#0a6b38] hover:bg-[#07532b] text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5 transition self-start md:self-auto select-none">
+                            <i data-lucide="plus" class="w-4.5 h-4.5"></i> নতুন নোটিশ প্রকাশ ও SMS
+                        </button>
+                    </div>
+
+                    <div class="flex border-b border-n7 overflow-x-auto bg-white rounded-t-xl shadow-2xs">
+                        <button onclick="changeNoticeTab('notice-list')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeNoticeTab === 'notice-list' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="megaphone" class="w-4 h-4"></i> নিয়মিত নোটিশ বোর্ড খতিয়ান
+                        </button>
+                        <button onclick="changeNoticeTab('publish-notice')" class="px-5 py-3 text-xs font-bold border-b-2 ${window.activeNoticeTab === 'publish-notice' ? 'border-b-2 border-p3 text-p3 font-black bg-slate-50/50' : 'text-slate-500 hover:text-slate-800'} shrink-0 cursor-pointer flex items-center gap-1.5">
+                            <i data-lucide="mail" class="w-4 h-4"></i> নতুন নোটিশ / SMS পাঠান
+                        </button>
+                    </div>
+
+                    ${window.activeNoticeTab === 'notice-list' ? `
+                    <div class="bg-white border border-t-0 border-n7 rounded-b-xl p-4 shadow-2xs grid grid-cols-1 md:grid-cols-3 gap-3 -mt-5">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-slate-600">খুঁজুন (শিরোনাম বা বিবরণ):</label>
+                            <div class="relative">
+                                <input type="text" oninput="updateNoticeFilters('search', this.value)" placeholder="যেমন: ছুটির নোটিশ, মিটিং..." value="${window.noticeFilters.search}" class="w-full pl-8 pr-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                                <i data-lucide="search" class="absolute left-2.5 top-2 w-3.5 h-3.5 text-slate-400"></i>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-slate-600">টাইপ ফিল্টার:</label>
+                            <select onchange="updateNoticeFilters('type', this.value)" class="w-full px-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                                <option value="">সকল ধরণের নোটিশ</option>
+                                <option value="জরুরি" ${window.noticeFilters.type === 'জরুরি' ? 'selected' : ''}>জরুরি</option>
+                                <option value="তথ্য" ${window.noticeFilters.type === 'তথ্য' ? 'selected' : ''}>তথ্য</option>
+                                <option value="সাধারণ" ${window.noticeFilters.type === 'সাধারণ' ? 'selected' : ''}>সাধারণ</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-bold text-slate-600">টার্গেট গ্রুপ ফিল্টার:</label>
+                            <select onchange="updateNoticeFilters('target', this.value)" class="w-full px-3 py-1.5 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3 bg-white">
+                                <option value="">সবাই (টার্গেট)</option>
+                                <option value="সবাই" ${window.noticeFilters.target === 'সবাই' ? 'selected' : ''}>সবাই</option>
+                                <option value="শিক্ষক" ${window.noticeFilters.target === 'শিক্ষক' ? 'selected' : ''}>শিক্ষক</option>
+                                <option value="অভিভাবক" ${window.noticeFilters.target === 'অভিভাবক' ? 'selected' : ''}>অভিভাবক</option>
+                            </select>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div id="notice-tab-contents" class="space-y-4">
+                        ${window.activeNoticeTab === 'notice-list' ? `
+                            <div id="notice-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                ${renderNoticeListItems()}
+                            </div>
+                        ` : renderPublishNoticeForm()}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderNoticeListItems() {
+            const filters = window.noticeFilters;
+            let filtered = S.notices || [];
+
+            filtered = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
+
+            const sVal = filters.search.trim().toLowerCase();
+            if (sVal) {
+                filtered = filtered.filter(n => 
+                    (n.title && n.title.toLowerCase().includes(sVal)) ||
+                    (n.content && n.content.toLowerCase().includes(sVal))
+                );
+            }
+            if (filters.type) filtered = filtered.filter(n => n.type === filters.type);
+            if (filters.target) filtered = filtered.filter(n => n.target === filters.target);
+
+            if (filtered.length === 0) {
+                return `<div class="col-span-full bg-white border border-n7 rounded-xl p-8 text-center text-slate-400 text-xs font-bold">নোটিশ বোর্ডে কোনো তথ্য নেই।</div>`;
+            }
+
+            const canManage = S.role === "মুহতামিম" || S.role === "শিক্ষক";
+
+            return filtered.map(not => {
+                let badgeClass = "bg-slate-50 text-slate-600 border border-slate-200";
+                if (not.type === "জরুরি") badgeClass = "bg-rose-50 text-rose-600 border border-rose-100";
+                else if (not.type === "তথ্য") badgeClass = "bg-sky-50 text-sky-600 border border-sky-100";
+
+                return `
+                    <div class="bg-white border border-n7 rounded-xl p-5 shadow-2xs hover:shadow-xs transition flex flex-col justify-between animate-in fade-in duration-100">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-start gap-1">
+                                <span class="px-2 py-0.5 rounded text-[8.5px] font-bold ${badgeClass}">${not.type}</span>
+                                <span class="text-[9px] text-slate-400 font-mono font-bold">${bnNum(not.date)}</span>
+                            </div>
+                            <div class="space-y-1">
+                                <h4 class="text-xs md:text-sm font-black text-slate-805 leading-snug">${not.title}</h4>
+                                <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-100 px-1.5 py-0.5 rounded text-[8.5px] font-bold">
+                                    অডিয়েন্স: ${not.target}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-600 leading-relaxed text-ellipsis overflow-hidden line-clamp-3">${not.content}</p>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                            <button onclick="openNoticeDetails('${not.id}')" class="px-3 py-1.5 bg-slate-50 border hover:bg-slate-100 text-slate-750 text-[10.5px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1 select-none">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i> বিস্তারিত দেখুন
+                            </button>
+                            ${canManage ? `
+                                <button onclick="deleteNotice('${not.id}')" class="p-1.5 hover:bg-rose-50 text-slate-450 hover:text-rose-650 border border-transparent rounded-lg cursor-pointer transition">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderPublishNoticeForm() {
+            return `
+                <div class="bg-white border border-n7 rounded-xl p-5 md:p-6 shadow-sm max-w-xl mx-auto">
+                    <h3 class="text-xs md:text-sm font-black text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-1.5">
+                        <i data-lucide="edit-3" class="w-4.5 h-4.5"></i> নতুন নোটিশ ও মেসেজ প্রকাশ ফরম
+                    </h3>
+                    <form onsubmit="saveNotice(event)" class="space-y-4 text-xs font-semibold text-slate-700">
+                        <div>
+                            <label class="block text-slate-600 mb-1">নোটিশ শিরোনাম (আবশ্যক):</label>
+                            <input type="text" id="nt-title" required placeholder="যেমন: पवित्र रमज्ञान ছুটির নোটিশ" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold focus:outline-none focus:ring-p3">
+                        </div>
+                        <div>
+                            <label class="block text-slate-600 mb-1">বিস্তারিত নোটিশ বিবরণ (আবশ্যক):</label>
+                            <textarea id="nt-content" required placeholder="এখানে আপনার নোটিশের সুনির্দিষ্ট তথ্য বিশদভাবে লিখুন..." class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-semibold focus:outline-none focus:ring-p3 h-28 resize-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-slate-600 mb-1">নোটিশ প্রকার:</label>
+                                <select id="nt-type" class="w-full px-3 py-2 border border-n7 rounded-lg bg-white text-xs font-bold focus:outline-none focus:ring-p3">
+                                    <option value="সাধারণ">সাধারণ</option>
+                                    <option value="জরুরি">জরুরি</option>
+                                    <option value="তথ্য">তথ্য</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 mb-1">টার্গেট শ্রোতা:</label>
+                                <select id="nt-target" class="w-full px-3 py-2 border border-n7 rounded-lg bg-white text-xs font-bold focus:outline-none focus:ring-p3">
+                                    <option value="সবাই">সবাই (শিক্ষক, ছাত্র ও অভিভাবক)</option>
+                                    <option value="শিক্ষক">শিক্ষক</option>
+                                    <option value="অভিভাবক">অভিভাবক</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 mb-1">পৌঁছানোর মাধ্যম:</label>
+                                <select id="nt-channel" class="w-full px-3 py-2 border border-n7 rounded-lg bg-white text-xs font-bold focus:outline-none focus:ring-p3">
+                                    <option value="শুধু নোটিশ">শুধু নোটিশ (বোর্ড)</option>
+                                    <option value="শুধু SMS (demo)">শুধু SMS (ডেমো)</option>
+                                    <option value="উভয়">উভয় (নোটিশ + ডেমো SMS)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t flex gap-2 justify-end">
+                            <button type="button" onclick="changeNoticeTab('notice-list')" class="px-4 py-2 hover:bg-slate-50 border border-n7 rounded-xl text-slate-500 cursor-pointer">বাতিল</button>
+                            <button type="submit" class="px-5 py-2 bg-[#0a6b38] hover:bg-[#07532b] text-white rounded-xl shadow cursor-pointer flex items-center gap-1.5">
+                                <i data-lucide="check" class="w-4 h-4"></i> নোটিশ প্রকাশ ও প্রেরণ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        function saveNotice(event) {
+            event.preventDefault();
+            const title = document.getElementById("nt-title").value.trim();
+            const content = document.getElementById("nt-content").value.trim();
+            const type = document.getElementById("nt-type").value;
+            const target = document.getElementById("nt-target").value;
+            const channel = document.getElementById("nt-channel").value;
+
+            if (!title || !content) return toast("শিরোনাম ও নোটিশের বিবরণ অবশ্যই দিন!", "error");
+
+            if (!S.notices) S.notices = [];
+
+            const newId = genNoticeId();
+            const todayStr = new Date().toISOString().substring(0, 10);
+            S.notices.unshift({ id: newId, title, content, type, target, channel, date: todayStr });
+
+            logSystemActivity(`নোটিশ প্রকাশ - ${title}`);
+            saveL();
+
+            if (channel === "শুধু SMS (demo)" || channel === "উভয়") {
+                setTimeout(() => {
+                    toast(`ডেমো SMS: ${target}দের অফিশিয়াল মোবাইলে ডেমো নোটিশ পাঠানো হয়েছে!`, "info");
+                }, 500);
+            }
+
+            toast("নোটিশটি নোটিশ বোর্ডে সফলভাবে টাঙানো হয়েছে।");
+            window.activeNoticeTab = "notice-list";
+            renderNoticeModule(document.getElementById("active-panel-container"));
+        }
+
+        function deleteNotice(noticeId) {
+            if (!confirm("আপনি কি নিশ্চিতভাবে এই নোটিশটি সরিয়ে ফেলতে চান?")) return;
+            S.notices = (S.notices || []).filter(n => n.id !== noticeId);
+            logSystemActivity(`নোটিশ ডিলিট - ID: ${noticeId}`);
+            saveL();
+            toast("নোটিশ সফলভাবে অপসারিত হয়েছে।");
+            renderNoticeModule(document.getElementById("active-panel-container"));
+        }
+
+        function openNoticeDetails(noticeId) {
+            ensureNoticeModalsExist();
+            const modal = document.getElementById("notice-details-modal");
+            const not = S.notices.find(n => n.id === noticeId);
+            if (!not) return toast("নোটিশ পাওয়া যায়নি!", "error");
+
+            let badgeClass = "bg-slate-50 text-slate-600 border border-slate-200";
+            if (not.type === "জরুরি") badgeClass = "bg-rose-50 text-rose-600 border border-rose-100";
+            else if (not.type === "তথ্য") badgeClass = "bg-sky-50 text-sky-600 border border-sky-100";
+
+            modal.innerHTML = `
+                <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div class="bg-gradient-to-r from-slate-800 to-slate-900 px-5 py-4 text-white flex justify-between items-center">
+                        <span class="flex items-center gap-2 font-bold text-sm md:text-base">
+                            <i data-lucide="megaphone" class="w-5 h-5 text-red-400"></i> মাদ্রাসার অফিশিয়াল নোটিশ বিবরণ
+                        </span>
+                        <button onclick="closeNoticeDetailsModal()" class="hover:opacity-80 text-white cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+                    </div>
+                    <div class="p-5 space-y-4 text-xs text-slate-700">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                            <span class="px-2 py-0.5 rounded text-[8.5px] font-bold ${badgeClass}">${not.type}</span>
+                            <span class="text-[9px] text-slate-400 font-mono font-bold">প্রকাশিত: ${bnNum(not.date)}</span>
+                        </div>
+                        <div class="space-y-1">
+                            <h3 class="text-sm font-extrabold text-slate-850 leading-snug">${not.title}</h3>
+                            <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-100 px-1.5 py-0.5 rounded text-[8.5px] font-bold">
+                                অডিয়েন্স: ${not.target}
+                            </span>
+                        </div>
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100 max-h-[220px] overflow-y-auto">
+                            <p class="text-[11.5px] text-slate-600 leading-relaxed font-semibold whitespace-pre-line">${not.content}</p>
+                        </div>
+                        <div class="pt-2 border-t text-[10px] text-slate-400 font-semibold flex justify-between">
+                            <span>মাধ্যম: ${not.channel || 'শুধু নোটিশ'}</span>
+                            <span>আইডি: ${not.id}</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-5 py-3 border-t text-right">
+                        <button onclick="closeNoticeDetailsModal()" class="px-5 py-2 hover:bg-slate-100 bg-white border border-n7 rounded-xl text-slate-600 font-extrabold cursor-pointer transition">বন্ধ করুন</button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            modal.style.display = "flex";
+        }
+
+        function closeNoticeDetailsModal() {
+            document.getElementById("notice-details-modal").style.display = "none";
         }
 
         // ==========================================
@@ -6161,12 +8300,12 @@
                                     <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> খাতভিত্তিক মাসিক আয়
                                 </h4>
                                 <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                    ${Object.entries(incomeCats).map(([cat, total]) => `
-                                        <div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-[11px]">
-                                            <span class="text-slate-700 font-bold">${cat}</span>
-                                            <strong class="text-[#0a6b38] font-mono">৳ ${bnNum(total)}</strong>
-                                        </div>
-                                    `).join('') || `<div class="text-slate-400 text-center py-6 text-[10.5px]">এই মাসে কোনো আয় নথিভুক্ত নেই।</div>`}
+                                    ${Object.entries(incomeCats).map(([cat, total]) => {
+                                        return '<div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-[11px]">' +
+                                             '<span class="text-slate-700 font-bold">' + cat + '</span>' +
+                                             '<strong class="text-[#0a6b38] font-mono">৳ ' + bnNum(total) + '</strong>' +
+                                         '</div>';
+                                     }).join('') || '<div class="text-slate-400 text-center py-6 text-[10.5px]">এই মাসে কোনো আয় নথিভুক্ত নেই।</div>'}
                                 </div>
                             </div>
 
@@ -6176,12 +8315,12 @@
                                     <i data-lucide="trending-down" class="w-3.5 h-3.5"></i> খাতভিত্তিক মাসিক ব্যয়
                                 </h4>
                                 <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                    ${Object.entries(expenseCats).map(([cat, total]) => `
-                                        <div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-[11px]">
-                                            <span class="text-slate-700 font-bold">${cat}</span>
-                                            <strong class="text-rose-600 font-mono">৳ ${bnNum(total)}</strong>
-                                        </div>
-                                    `).join('') || `<div class="text-slate-400 text-center py-6 text-[10.5px]">এই মাসে কোনো ব্যয় নথিভুক্ত নেই।</div>`}
+                                    ${Object.entries(expenseCats).map(([cat, total]) => {
+                                        return '<div class="flex justify-between items-center bg-slate-50 border border-slate-100 p-2.5 rounded-lg text-[11px]">' +
+                                             '<span class="text-slate-700 font-bold">' + cat + '</span>' +
+                                             '<strong class="text-rose-600 font-mono">৳ ' + bnNum(total) + '</strong>' +
+                                         '</div>';
+                                     }).join('') || '<div class="text-slate-400 text-center py-6 text-[10.5px]">এই মাসে কোনো ব্যয় নথিভুক্ত নেই।</div>'}
                                 </div>
                             </div>
                         </div>
@@ -6688,7 +8827,7 @@
             openReceiptModal(window.feeCollectionDraft);
         }
 
-        function openReceiptModal(draft) {
+        function openReceiptModal(draft, isSaved = false) {
             ensureReceiptModalExists();
             const modal = document.getElementById("receipt-preview-modal");
             if (!modal) return;
@@ -6741,6 +8880,10 @@
                                     <td class="text-slate-400">পেমেন্ট মাধ্যম:</td>
                                     <td class="text-slate-800">${getBengaliPaymentMethod(draft.method)}</td>
                                 </tr>
+                                <tr class="flex justify-between border-b p-2">
+                                    <td class="text-slate-400">আদায়কারী (User):</td>
+                                    <td class="text-slate-800">${draft.user || S.user.name || "সিস্টেম"}</td>
+                                </tr>
                                 ${draft.notes ? `
                                 <tr class="flex justify-between p-2">
                                     <td class="text-slate-400">বিশেষ কোনো তথ্য:</td>
@@ -6771,7 +8914,31 @@
                 </div>
             `;
 
+            const footer = document.getElementById("receipt-preview-footer");
+            if (footer) {
+                if (isSaved) {
+                    window.activeViewedReceiptDraft = draft;
+                    footer.innerHTML = `
+                        <button type="button" onclick="printReceiptMemo(window.activeViewedReceiptDraft)" class="px-4 py-2 bg-p3 hover:bg-p1 text-white rounded-lg cursor-pointer flex items-center gap-1.5 transition shadow font-extrabold">
+                            <i data-lucide="printer" class="w-4 h-4"></i> এই রসিদটি প্রিন্ট করুন (Print again)
+                        </button>
+                        <button type="button" onclick="closeReceiptModal()" class="px-4 py-2 hover:bg-slate-50 border rounded-lg text-slate-500 cursor-pointer">বন্ধ করুন</button>
+                    `;
+                } else {
+                    footer.innerHTML = `
+                        <button type="button" onclick="completeReceiptOnly()" class="px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg cursor-pointer flex items-center gap-1 hover:bg-emerald-100 transition shadow-2xs">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> শুধু সম্পন্ন করুন (Complete)
+                        </button>
+                        <button type="button" onclick="completeAndPrintReceipt()" class="px-3.5 py-2 bg-p3 hover:bg-p1 text-white rounded-lg cursor-pointer flex items-center gap-1 hover:opacity-95 transition shadow">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i> সম্পন্ন ও প্রিন্ট (Print)
+                        </button>
+                        <button type="button" onclick="closeReceiptModal()" class="px-3 py-2 hover:bg-slate-50 border rounded-lg text-slate-500 cursor-pointer">বাতিল</button>
+                    `;
+                }
+            }
+
             modal.style.display = "flex";
+            lucide.createIcons();
         }
 
         function ensureReceiptModalExists() {
@@ -6791,14 +8958,8 @@
                         <div id="receipt-preview-content" class="flex-grow overflow-y-auto p-5 md:p-6 space-y-4">
                             <!-- Dynamically loaded -->
                         </div>
-                        <div class="flex flex-wrap gap-2 justify-end p-5 pt-0 border-t border-slate-100 font-extrabold text-[10px] text-slate-700">
-                            <button type="button" onclick="completeReceiptOnly()" class="px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg cursor-pointer flex items-center gap-1 hover:bg-emerald-100 transition shadow-2xs">
-                                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> শুধু সম্পন্ন করুন (Complete)
-                            </button>
-                            <button type="button" onclick="completeAndPrintReceipt()" class="px-3.5 py-2 bg-p3 hover:bg-p1 text-white rounded-lg cursor-pointer flex items-center gap-1 hover:opacity-95 transition shadow">
-                                <i data-lucide="printer" class="w-3.5 h-3.5"></i> সম্পন্ন ও প্রিন্ট (Print)
-                            </button>
-                            <button type="button" onclick="closeReceiptModal()" class="px-3 py-2 hover:bg-slate-50 border rounded-lg text-slate-500 cursor-pointer">বাতিল</button>
+                        <div id="receipt-preview-footer" class="flex flex-wrap gap-2 justify-end p-5 pt-0 border-t border-slate-100 font-extrabold text-[10px] text-slate-700">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 `;
@@ -6826,6 +8987,7 @@
                 date: d.date,
                 method: getBengaliPaymentMethodSimple(d.method),
                 receiptNo: d.receiptNo,
+                user: S.user.name || "সিস্টেম",
                 notes: d.notes
             };
 
@@ -6873,6 +9035,7 @@
                 date: d.date,
                 method: getBengaliPaymentMethodSimple(d.method),
                 receiptNo: d.receiptNo,
+                user: S.user.name || "সিস্টেম",
                 notes: d.notes
             };
 
