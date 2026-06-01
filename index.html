@@ -1077,7 +1077,7 @@
                     renderBoardingModule(dest);
                     break;
                 case "print":
-                    renderModuleStub(view, dest);
+                    renderPrintModule(dest);
                     break;
                 case "donors":
                     renderDonorsModule(dest);
@@ -1991,6 +1991,1484 @@
                 "donors": "দাতা ও অনুদান", "notice": "নোটিশ ও মেসেজিং", "print": "রিপোর্ট প্রিন্ট সেন্টার"
             };
             return mapped[id] || id;
+        }
+
+
+        // ==========================================
+        // SMART PRINT CENTER MODULE (PHASE 12)
+        // ==========================================
+        window.activePrintTemplate = "admission-form";
+        window.printOptions = {
+            studentId: "",
+            feeId: "",
+            teacherId: "",
+            salaryId: "",
+            startDate: "",
+            endDate: "",
+            jamat: "",
+            section: "",
+            showLogo: true,
+            showName: true,
+            showAddress: true,
+            showPhone: true,
+            showSeal: true,
+            showSignature: true,
+            showWatermark: true,
+            fontSize: "sm"
+        };
+
+        // Initialize default dates
+        if (!window.printOptions.startDate) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            window.printOptions.startDate = `${year}-${month}-01`;
+            window.printOptions.endDate = today.toISOString().split('T')[0];
+        }
+
+        function renderPrintModule(dest) {
+            const students = S.students || [];
+            const teachers = S.teachers || [];
+            
+            // Auto select first entries if options are empty
+            if (!window.printOptions.studentId && students.length > 0) {
+                window.printOptions.studentId = students[0].id;
+            }
+            if (!window.printOptions.teacherId && teachers.length > 0) {
+                window.printOptions.teacherId = teachers[0].id;
+            }
+            if (window.printOptions.studentId && !window.printOptions.feeId) {
+                const list = (S.fees || []).filter(f => f.studentId === window.printOptions.studentId);
+                if (list.length > 0) window.printOptions.feeId = list[0].id;
+            }
+            if (window.printOptions.teacherId && !window.printOptions.salaryId) {
+                const list = (S.salaries || []).filter(s => s.teacherId === window.printOptions.teacherId);
+                if (list.length > 0) window.printOptions.salaryId = list[0].id;
+            }
+
+            dest.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Head branding title banner -->
+                    <div class="p-6 bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-md">
+                        <div class="space-y-1">
+                            <span class="px-2.5 py-0.5 bg-emerald-700/60 border border-emerald-500/30 rounded-full text-[10px] text-emerald-250 font-bold uppercase tracking-wider">মডিউল ১২</span>
+                            <h1 class="text-base md:text-xl font-bold flex items-center gap-1.5 leading-tight"><i data-lucide="printer" class="w-5 h-5"></i> স্মার্ট প্রিন্ট ও রিপোর্টিং সেন্টার</h1>
+                            <p class="text-xs text-emerald-100/80">যেকোনো প্রকার দাখেলা ফরম, বেতন রশিদ, ক্যাশ খতিয়ান ও প্রাতিষ্ঠানিক খাতা সরাসরি কাস্টমাইজেশন ও প্রিন্ট ড্যাশবোর্ড</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left Column: Template Options -->
+                        <div class="lg:col-span-1 space-y-4">
+                            <!-- Category: Student prints -->
+                            <div class="bg-white border border-n7 rounded-2xl p-4 shadow-xs space-y-2.5">
+                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><i data-lucide="user" class="w-3.5 h-3.5"></i> শিক্ষার্থী তথ্য মুদ্রণ</h3>
+                                <div class="space-y-1.5">
+                                    ${renderTemplateTabItem("admission-form", "📝 ভর্তি ও দাখেলা ফরম (Admission Form)", "নতুন ভর্তি খতিয়ান আবেদন")}
+                                    ${renderTemplateTabItem("student-profile", "🧑‍🎓 সম্পূর্ণ প্রোফাইল বিবরণী (Profile)", "শ্রেণী হাজিরা, অগ্রগতি ও ফি রিপোর্ট")}
+                                    ${renderTemplateTabItem("id-card", "🪪 শিক্ষার্থীর ডিজিটাল আইডি কার্ড (ID Card)", "অফিসিয়াল পকেট পাসের আইডি")}
+                                    ${renderTemplateTabItem("admit-card", "🎟️ পরীক্ষার প্রবেশপত্র (Admit Card)", "সিট প্ল্যান ও পরীক্ষার হল ক্লাসরুম পাস")}
+                                </div>
+                            </div>
+                            
+                            <!-- Category: Financial prints -->
+                            <div class="bg-white border border-n7 rounded-2xl p-4 shadow-xs space-y-2.5">
+                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><i data-lucide="wallet" class="w-3.5 h-3.5"></i> আর্থিক মেমো ভাউচার</h3>
+                                <div class="space-y-1.5">
+                                    ${renderTemplateTabItem("fee-receipt", "৳ বেতন ও ফি আদায় রশিদ (Fee RCT-07)", "পরিশোধ রসিদ বই খতিয়ান")}
+                                    ${renderTemplateTabItem("salary-receipt", "💸 শিক্ষক বেতন ও ভাতা রশিদ (Salary)", "বেতন প্রদানের মেমো ভাউচার")}
+                                    ${renderTemplateTabItem("income-report", "📈 ক্লাসিফায়েড আয় বিবরণী (Income)", "নির্দিষ্ট সময়কাল ও ক্যাটাগরি খাত")}
+                                    ${renderTemplateTabItem("expense-report", "📉 ক্লাসিফায়েড ব্যয় বিবরণী (Expense)", "নির্দিষ্ট সময়কাল ও ভাউচার মডিউল")}
+                                    ${renderTemplateTabItem("cashbook", "📒 ক্যাশ বুক খতিয়ান সারসংক্ষেপ (Cashbook)", "নিট ব্যালেন্স ও আদান প্রদান সামারি")}
+                                </div>
+                            </div>
+                            
+                            <!-- Category: Institutional reports -->
+                            <div class="bg-white border border-n7 rounded-2xl p-4 shadow-xs space-y-2.5">
+                                <h3 class="text-xs font-black text-slate-400 uppercase tracking-wider flex items-center gap-1"><i data-lucide="school" class="w-3.5 h-3.5"></i> প্রাতিষ্ঠানিক খাতা ও রিপোর্ট</h3>
+                                <div class="space-y-1.5">
+                                    ${renderTemplateTabItem("student-list", "📋 শ্রেণী ভিত্তিক ছাত্র-ছাত্রী খাতা (Students)", "জামত অনুযায়ী পুরো তালিকা")}
+                                    ${renderTemplateTabItem("teacher-list", "👨‍🏫 শিক্ষক ও কর্মচারী ডিরেক্টরি (Staff)", "মোট স্টাফ তালিকা ও পদবি খতিয়ান")}
+                                    ${renderTemplateTabItem("donor-list", "🤝 দ্বীনি দাতা সদস্য খতিয়ান (Donors)", "দাতা সদস্য ও আজীবন স্পনসর")}
+                                    ${renderTemplateTabItem("boarding-report", "🍽️ বোর্ডিং বাজার বিবরণী (Boarding)", "দৈনিক রান্না ও কাঁচাবাজার খরচ")}
+                                    ${renderTemplateTabItem("attendance-report", "📅 ক্লাসরুম মাসিক হাজিরা সামারি", "শিক্ষার্থীদের ক্লাসরুম শতকরা হার")}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right Column: Configurations and Previews -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-white border border-n7 rounded-2xl p-6 shadow-sm space-y-6">
+                                <div class="border-b border-n7 pb-4 flex items-center justify-between">
+                                    <h2 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                        <i data-lucide="sliders" class="w-4 h-4 text-p3"></i> 
+                                        নির্বাচিত রিপোর্টের ফিল্টার ও কাস্টমাইজেশন
+                                    </h2>
+                                    <span class="px-2.5 py-0.5 bg-p5 border border-emerald-100 rounded-full text-[10px] text-p3 font-bold uppercase tracking-wider">
+                                        লাইভ প্রিভিউ রেডি
+                                    </span>
+                                </div>
+                                
+                                <div class="space-y-4" id="print-filters-container">
+                                    ${renderFiltersContent()}
+                                </div>
+                                
+                                <div class="pt-4 border-t border-n7 flex flex-col sm:flex-row items-center gap-3">
+                                    <button onclick="openDynamicPrintPreviewModal()" class="w-full sm:w-auto px-5 py-3 bg-p3 hover:bg-p1 text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer text-xs">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                        প্রিভিউ ও ডিজাইন সম্পাদন করুন
+                                    </button>
+                                    <p class="text-[10px] text-slate-400 italic text-center sm:text-left">
+                                        * প্রিভিউ খোলার পর আপনি ডকুমেন্টের যেকোনো লেখার ওপর ক্লিক করে সরাসরি কী-বোর্ড দিয়ে এডিট করতে পারবেন।
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-amber-50/50 border border-amber-200/50 rounded-2xl p-5 space-y-3">
+                                <h4 class="text-xs font-bold text-amber-800 flex items-center gap-1">
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                    মুদ্রণ গাইডলাইন ও সেটিংস বিন্যাস
+                                </h4>
+                                <ul class="list-disc pl-5 text-[11px] text-slate-600 space-y-1.5 leading-relaxed">
+                                    <li>মুদ্রণ ডকুমেন্টসমূহ স্বয়ংক্রিয়ভাবে স্ট্যান্ডার্ড <strong>A4</strong> পেজে প্রিন্ট করার উপযোগী করে ডিজাইন করা হয়েছে।</li>
+                                    <li>সরাসরি পিডিএফ সংরক্ষণ করতে ব্রাউজার প্রিন্ট উইন্ডো থেকে ডেস্টিনেশন হিসেবে <strong>"Save as PDF"</strong> সিলেক্ট করুন।</li>
+                                    <li>ব্রাউজার প্রিন্ট প্রম্পট অপশনে মার্জিন ঠিক রাখতে <strong>"Headers and Footers"</strong> আনচেক এবং ব্যাকগ্রাউন্ড নিশ্চিত করতে <strong>"Background Graphics"</strong> চেক করুন।</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderTemplateTabItem(id, label, sub) {
+            const isActive = window.activePrintTemplate === id;
+            return `
+                <button onclick="switchPrintTemplate('${id}')" class="w-full text-left p-2.5 rounded-xl transition flex items-center justify-between group cursor-pointer ${isActive ? 'bg-p3 text-white border-none' : 'hover:bg-slate-50 border border-slate-100'}">
+                    <div class="space-y-0.5">
+                        <div class="text-xs font-bold ${isActive ? 'text-white' : 'text-slate-700'}">${label}</div>
+                        <div class="text-[10px] ${isActive ? 'text-emerald-100/80' : 'text-slate-400'}">${sub}</div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 transition-transform group-hover:translate-x-1 ${isActive ? 'text-white' : 'text-slate-400'}"></i>
+                </button>
+            `;
+        }
+
+        function renderFiltersContent() {
+            const template = window.activePrintTemplate;
+            const students = S.students || [];
+            const teachers = S.teachers || [];
+            
+            let html = "";
+            
+            if (template === "admission-form" || template === "student-profile" || template === "id-card" || template === "admit-card") {
+                html += `
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-slate-600">শিক্ষার্থী নির্বাচন করুন <span class="text-red-500">*</span></label>
+                        <select onchange="updatePrintOption('studentId', this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                            ${students.map(st => `<option value="${st.id}" ${window.printOptions.studentId === st.id ? "selected" : ""}>${st.name} | রোল: ${st.id} | জামাত: ${st.jamat}</option>`).join('')}
+                        </select>
+                        <p class="text-[10px] text-slate-400">দাখেলা আইডি অথবা নাম চেক করে শিক্ষার্থী নির্বাচন করুন।</p>
+                    </div>
+                `;
+            } else if (template === "fee-receipt") {
+                html += `
+                    <div class="space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600">শিক্ষার্থী নির্বাচন করুন <span class="text-red-500">*</span></label>
+                            <select onchange="onFeeStudentChanged(this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                                <option value="">--- শিক্ষার্থী নির্বাচন করুন ---</option>
+                                ${students.map(st => `<option value="${st.id}" ${window.printOptions.studentId === st.id ? "selected" : ""}>${st.name} | আইডি: ${st.id} | জামাত: ${st.jamat}</option>`).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600">পরিশোধ মেমো ভাউচার রশিদ <span class="text-red-500">*</span></label>
+                            <select id="fee-receipt-select" onchange="updatePrintOption('feeId', this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                                ${renderFeeReceiptOptionsList(window.printOptions.studentId)}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            } else if (template === "salary-receipt") {
+                html += `
+                    <div class="space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600">শিক্ষক / কর্মচারী নির্বাচন করুন <span class="text-red-500">*</span></label>
+                            <select onchange="onSalaryTeacherChanged(this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                                <option value="">--- শিক্ষক নির্বাচন করুন ---</option>
+                                ${teachers.map(t => `<option value="${t.id}" ${window.printOptions.teacherId === t.id ? "selected" : ""}>${t.name} | পদবি: ${t.designation} | সম্মানি: ৳${bnNum(t.salary)}</option>`).join('')}
+                            </select>
+                        </div>
+                        
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600">বেতন প্রদানের বিবরণ ভাউচার <span class="text-red-500">*</span></label>
+                            <select id="salary-receipt-select" onchange="updatePrintOption('salaryId', this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                                ${renderSalaryReceiptOptionsList(window.printOptions.teacherId)}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            } else if (template === "income-report" || template === "expense-report" || template === "cashbook" || template === "boarding-report") {
+                html += `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-slate-600">তারিখ হতে (Start Date)</label>
+                                <input id="filter-start-date" type="date" value="${window.printOptions.startDate}" onchange="updatePrintOption('startDate', this.value)" class="w-full px-3 py-2 border border-n7 rounded-xl text-xs font-semibold font-mono focus:outline-none focus:ring-p3">
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-slate-600">তারিখ পর্যন্ত (End Date)</label>
+                                <input id="filter-end-date" type="date" value="${window.printOptions.endDate}" onchange="updatePrintOption('endDate', this.value)" class="w-full px-3 py-2 border border-n7 rounded-xl text-xs font-semibold font-mono focus:outline-none focus:ring-p3">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (template === "student-list") {
+                const divisions = S.divisions || ["নূরানী", "নাজেরা", "হিফয", "মক্তব", "কিতাব"];
+                html += `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-slate-600">বিভাগ / শ্রেণী পর্যায়</label>
+                                <select onchange="updatePrintOption('section', this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                                    <option value="">সব বিভাগ (All Sections)</option>
+                                    ${divisions.map(div => `<option value="${div}" ${window.printOptions.section === div ? "selected" : ""}>${div}</option>`).join('')}
+                                </select>
+                            </div>
+                            
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-slate-600">জামাত / শ্রেণী ফিল্টার</label>
+                                <input type="text" placeholder="যেমন: প্লে, প্রথম, মিযান (খালি রাখলে সব জামাত)" value="${window.printOptions.jamat}" onchange="updatePrintOption('jamat', this.value)" class="w-full px-3 py-2 border border-n7 rounded-xl text-xs font-bold focus:outline-none focus:ring-p3">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (template === "attendance-report") {
+                const divisions = S.divisions || ["নূরানী", "নাজেরা", "হিফয", "মক্তব", "কিতাব"];
+                html += `
+                    <div class="space-y-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600">হাজিরা রিপোর্ট সমাপনী তারিখ</label>
+                            <input type="date" value="${window.printOptions.endDate}" onchange="updatePrintOption('endDate', this.value)" class="w-full px-3 py-2 border border-n7 rounded-xl text-xs font-semibold font-mono focus:outline-none focus:ring-p3">
+                        </div>
+                        
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-600">শ্রেণী পর্যায়</label>
+                            <select onchange="updatePrintOption('section', this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
+                                <option value="">সব শ্রেণী পর্যায়</option>
+                                ${divisions.map(div => `<option value="${div}" ${window.printOptions.section === div ? "selected" : ""}>${div}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="p-6 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 space-y-1 text-slate-500">
+                        <i data-lucide="check-circle" class="w-8 h-8 text-emerald-600 mx-auto"></i>
+                        <p class="text-xs font-bold text-slate-700">কোন অতিরিক্ত ফিল্টারের প্রয়োজন নেই</p>
+                        <p class="text-[10px]">এই তালিকাটি সরাসরি সম্পূর্ণ ডাটাবেস হতে লোড হবে!</p>
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+
+        function renderFeeReceiptOptionsList(studentId) {
+            const fees = S.fees || [];
+            const list = fees.filter(f => f.studentId === studentId);
+            if (list.length === 0) {
+                return `<option value="">কোনো ফি আদায়ের রেকর্ড পাওয়া যায়নি</option>`;
+            }
+            return list.map(f => `<option value="${f.id}" ${window.printOptions.feeId === f.id ? "selected" : ""}>রশিদ নং: ${f.receiptNo} | মাস: ${f.month} | পরিমাণ: ৳${bnNum(f.amount)} | তারিখ: ${bnNum(f.date)}</option>`).join('');
+        }
+
+        function renderSalaryReceiptOptionsList(teacherId) {
+            const salaries = S.salaries || [];
+            const list = salaries.filter(s => s.teacherId === teacherId);
+            if (list.length === 0) {
+                return `<option value="">কোনো বেতন পেমেন্টের রেকর্ড পাওয়া যায়নি</option>`;
+            }
+            return list.map(s => `<option value="${s.id}" ${window.printOptions.salaryId === s.id ? "selected" : ""}>মাস: ${s.month} | পরিশোধ: ৳${bnNum(s.amount)} | তারিখ: ${bnNum(s.paymentDate)}</option>`).join('');
+        }
+
+        function switchPrintTemplate(id) {
+            window.activePrintTemplate = id;
+            
+            const students = S.students || [];
+            if (id === "fee-receipt" && students.length > 0) {
+                window.printOptions.studentId = students[0].id;
+                const filteredFees = (S.fees || []).filter(f => f.studentId === students[0].id);
+                window.printOptions.feeId = filteredFees.length > 0 ? filteredFees[0].id : "";
+            } else if (id === "salary-receipt" && (S.teachers || []).length > 0) {
+                window.printOptions.teacherId = S.teachers[0].id;
+                const filteredSalaries = (S.salaries || []).filter(s => s.teacherId === S.teachers[0].id);
+                window.printOptions.salaryId = filteredSalaries.length > 0 ? filteredSalaries[0].id : "";
+            }
+            
+            renderPrintModule(document.getElementById("active-panel-container"));
+        }
+        
+        function updatePrintOption(key, val) {
+            window.printOptions[key] = val;
+            if (key === "studentId") {
+                const select = document.getElementById("fee-receipt-select");
+                if (select) select.innerHTML = renderFeeReceiptOptionsList(val);
+                const fees = S.fees || [];
+                const filtered = fees.filter(f => f.studentId === val);
+                window.printOptions.feeId = filtered.length > 0 ? filtered[0].id : "";
+            } else if (key === "teacherId") {
+                const select = document.getElementById("salary-receipt-select");
+                if (select) select.innerHTML = renderSalaryReceiptOptionsList(val);
+                const salaries = S.salaries || [];
+                const filtered = salaries.filter(s => s.teacherId === val);
+                window.printOptions.salaryId = filtered.length > 0 ? filtered[0].id : "";
+            }
+        }
+        
+        function onFeeStudentChanged(studentId) {
+            window.printOptions.studentId = studentId;
+            const select = document.getElementById("fee-receipt-select");
+            if (select) {
+                select.innerHTML = renderFeeReceiptOptionsList(studentId);
+                window.printOptions.feeId = select.value;
+            }
+        }
+        
+        function onSalaryTeacherChanged(teacherId) {
+            window.printOptions.teacherId = teacherId;
+            const select = document.getElementById("salary-receipt-select");
+            if (select) {
+                select.innerHTML = renderSalaryReceiptOptionsList(teacherId);
+                window.printOptions.salaryId = select.value;
+            }
+        }
+
+        function ensurePrintPreviewModalExists() {
+            let m = document.getElementById("print-preview-modal");
+            if (!m) {
+                m = document.createElement("div");
+                m.id = "print-preview-modal";
+                m.className = "fixed inset-0 bg-black/60 backdrop-blur-xs z-[190] hidden items-center justify-center p-2 sm:p-4 overflow-y-auto";
+                document.body.appendChild(m);
+            }
+        }
+
+        function triggerNativePrint(htmlContent) {
+            let iframe = document.getElementById("reusable-print-iframe");
+            if (!iframe) {
+                iframe = document.createElement("iframe");
+                iframe.id = "reusable-print-iframe";
+                iframe.style.position = "absolute";
+                iframe.style.width = "0px";
+                iframe.style.height = "0px";
+                iframe.style.border = "none";
+                document.body.appendChild(iframe);
+            }
+            
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>প্রিন্ট ভিউ</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+                    \<script src="https://cdn.tailwindcss.com">\<\/script>
+                    \<script>
+                        tailwind.config = {
+                            theme: {
+                                extend: {
+                                    colors: {
+                                        p1: "#0d5c2e",
+                                        p3: "#0a6b38",
+                                        p5: "#f0fdf4",
+                                        n1: "#0f172a",
+                                        n4: "#94a3b8",
+                                        n7: "#e2e8f0",
+                                        n8: "#f8fafc"
+                                    },
+                                    fontFamily: {
+                                        sans: ['Hind Siliguri', 'Inter', 'sans-serif'],
+                                        mono: ['JetBrains Mono', 'monospace'],
+                                    }
+                                }
+                            }
+                        };
+                    \<\/script>
+                    <style>
+                        body {
+                            font-family: 'Hind Siliguri', 'Inter', sans-serif;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        .watermark {
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -55%) rotate(-28deg);
+                            font-size: 55px;
+                            color: rgba(10, 107, 56, 0.04);
+                            font-weight: 900;
+                            white-space: nowrap;
+                            pointer-events: none;
+                            z-index: 0;
+                            user-select: none;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                                margin: 0;
+                            }
+                            .no-print {
+                                display: none !important;
+                            }
+                        }
+                    </style>
+                </head>
+                <body class="bg-white p-6 leading-relaxed">
+                    ${htmlContent}
+                    \<script>
+                        window.onload = function() {
+                            window.print();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            doc.close();
+        }
+
+        function triggerPrintFromPreview() {
+            const inner = document.getElementById("preview-sheet-inner");
+            if (!inner) return;
+            triggerNativePrint(inner.innerHTML);
+        }
+
+        function closeDynamicPrintPreviewModal() {
+            const modal = document.getElementById("print-preview-modal");
+            if (modal) {
+                modal.classList.add("hidden");
+                modal.classList.remove("flex");
+            }
+        }
+
+        function setPreviewSize(size) {
+            const container = document.getElementById("preview-sheet-container");
+            if (!container) return;
+            
+            document.querySelectorAll(".preview-size-btn").forEach(btn => {
+                btn.className = "preview-size-btn px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 font-semibold text-[10px] rounded-lg transition-colors cursor-pointer flex items-center gap-1";
+            });
+            
+            const btn = document.getElementById(`btn-size-${size}`);
+            if (btn) {
+                btn.className = "preview-size-btn px-3 py-1.5 bg-p3 text-white font-bold text-[10px] rounded-lg transition shadow-sm flex items-center gap-1";
+            }
+            
+            if (size === "mobile") {
+                container.style.width = "380px";
+                toast("মোবাইল রেসপন্সিভ লেআউট প্রিভিউ", "success");
+            } else if (size === "tablet") {
+                container.style.width = "640px";
+                toast("ট্যাবলেট রেসপন্সিভ লেআউট প্রিভিউ", "success");
+            } else {
+                container.style.width = "820px";
+                toast("স্ট্যান্ডার্ড প্রিন্ট পেজ লেআউট প্রিভিউ (A4)", "success");
+            }
+        }
+
+        function updatePreviewSettings(key, checked) {
+            window.printOptions[key] = checked;
+            const sheet = document.getElementById("preview-sheet-inner");
+            if (!sheet) return;
+            
+            if (key === "showLogo") {
+                const el = sheet.querySelector(".print-logo");
+                if (el) el.style.display = checked ? "" : "none";
+            } else if (key === "showName") {
+                const el = sheet.querySelector(".print-name");
+                if (el) el.style.display = checked ? "" : "none";
+            } else if (key === "showAddress") {
+                const el = sheet.querySelector(".print-address");
+                if (el) el.style.display = checked ? "" : "none";
+            } else if (key === "showPhone") {
+                const el = sheet.querySelector(".print-phone");
+                if (el) el.style.display = checked ? "" : "none";
+            } else if (key === "showSeal") {
+                const el = sheet.querySelector(".print-seal");
+                if (el) el.style.display = checked ? "" : "none";
+            } else if (key === "showSignature") {
+                const el = sheet.querySelector(".print-signature");
+                if (el) el.style.display = checked ? "" : "none";
+            } else if (key === "showWatermark") {
+                const el = sheet.querySelector(".watermark-wrapper");
+                if (el) {
+                    if (checked) el.classList.remove("hidden");
+                    else el.classList.add("hidden");
+                }
+            } else if (key === "fontSize") {
+                const elComp = sheet.querySelector(".print-layout");
+                if (elComp) {
+                    elComp.className = `relative w-full h-full p-4 overflow-hidden print-layout select-text text-${checked}`;
+                }
+            }
+        }
+
+        function openDynamicPrintPreviewModal() {
+            ensurePrintPreviewModalExists();
+            const modal = document.getElementById("print-preview-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            
+            const compiledHtml = compileSelectedTemplate();
+            
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col md:flex-row shadow-2xl border border-n7 text-slate-700 text-xs">
+                    <!-- Main Area Sheet of paper -->
+                    <div class="flex-1 bg-slate-100 p-4 md:p-6 flex flex-col items-center justify-start overflow-y-auto space-y-4">
+                        <div class="w-full bg-white/95 border border-slate-200/65 shadow-xs rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-[10px]">
+                            <div class="flex items-center gap-1.5 text-slate-500 font-bold">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>লাইভ সম্পাদন মোড সক্রিয় (লেখার ওপরে সরাসরি মাউস দিয়ে ক্লিক করে পরিবর্তন করুন)</span>
+                            </div>
+                            
+                            <div class="flex items-center gap-1.5">
+                                <button id="btn-size-mobile" onclick="setPreviewSize('mobile')" class="preview-size-btn px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1">
+                                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i> মোবাইল
+                                </button>
+                                <button id="btn-size-tablet" onclick="setPreviewSize('tablet')" class="preview-size-btn px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1">
+                                    <i data-lucide="tablet" class="w-3.5 h-3.5"></i> ট্যাবলেট
+                                </button>
+                                <button id="btn-size-desktop" onclick="setPreviewSize('desktop')" class="preview-size-btn px-3 py-1.5 bg-p3 text-white font-bold rounded-lg transition shadow-sm flex items-center gap-1">
+                                    <i data-lucide="monitor" class="w-3.5 h-3.5"></i> পৃষ্ঠা (A4)
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full flex justify-center py-2 flex-grow min-h-[500px]">
+                            <div id="preview-sheet-container" class="bg-white shadow-xl border border-slate-300 rounded-sm transition-all duration-300 relative" style="width: 820px; min-h: 880px;">
+                                <div class="no-print select-none bg-emerald-50 border-b border-emerald-150 p-2.5 text-center text-[10px] text-p3 font-semibold flex items-center justify-center gap-1">
+                                    <i data-lucide="info" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>নিচের যেকোনো লেখার ওপর ক্লিক করে আপনি সরাসরি এডিট বা নতুন টাইপ করতে পারবেন।</span>
+                                </div>
+                                <div id="preview-sheet-inner" contenteditable="true" class="h-full select-text text-sm p-8 outline-none">
+                                    ${compiledHtml}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sidebar settings options Pane -->
+                    <div class="w-full md:w-[320px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 flex flex-col justify-between max-h-screen">
+                        <div class="p-5 space-y-6 flex-1 overflow-y-auto">
+                            <div class="border-b border-slate-200 pb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5"><i data-lucide="sliders" class="w-4 h-4 text-p3"></i> মুদ্রণ বিন্যাস কাস্টমাইজ</h3>
+                                <button onclick="closeDynamicPrintPreviewModal()" class="text-slate-400 hover:text-slate-700 cursor-pointer h-5 w-5 bg-slate-200/50 hover:bg-slate-200/90 rounded-full flex items-center justify-center transition-colors"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ডকুমেন্ট হেডার সেটিংস</h4>
+                                <div class="space-y-3 bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                                    ${renderToggleCheckbox("showLogo", "মাদ্রাসা লোগো (Show Logo)")}
+                                    ${renderToggleCheckbox("showName", "মাদ্রাসার নাম (Show Name)")}
+                                    ${renderToggleCheckbox("showAddress", "প্রতিষ্ঠানের ঠিকানা (Show Address)")}
+                                    ${renderToggleCheckbox("showPhone", "যোগাযোগ ফোন (Show Phone)")}
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider">লেআউট কাস্টমাইজ</h4>
+                                <div class="space-y-3 bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                                    ${renderToggleCheckbox("showWatermark", "মাদ্রাসার জলছাপ ব্যাকগ্রাউন্ড")}
+                                    ${renderToggleCheckbox("showSignature", "স্বাক্ষর প্রদানের এরিয়া")}
+                                    ${renderToggleCheckbox("showSeal", "সিল ও মোহর সেকশন এবং স্ট্যাম্প")}
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider">ফন্ট সাইজ অ্যাডজাস্টমেন্ট</h4>
+                                <div class="bg-white border border-slate-200 rounded-xl p-3 text-xs font-semibold">
+                                    <select onchange="updatePreviewSettings('fontSize', this.value)" class="w-full p-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-p3 text-xs">
+                                        <option value="xs">XS - অতি ছোট লেখা</option>
+                                        <option value="sm" selected>SM - স্ট্যান্ডার্ড লেখা</option>
+                                        <option value="base">BASE - বড় রিডেবেল লেখা</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 bg-white border-t border-slate-200 space-y-2">
+                            <button onclick="triggerPrintFromPreview()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 cursor-pointer text-xs">
+                                <i data-lucide="printer" class="w-4 h-4"></i>
+                                সরাসরি প্রিন্ট করুন (Print)
+                            </button>
+                            <button onclick="triggerPrintFromPreview()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-250 text-slate-700 font-bold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer text-xs">
+                                <i data-lucide="arrow-down-to-line" class="w-4 h-4"></i>
+                                পিডিএফ (Save as PDF) সংরক্ষণ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+            
+            // Apply checkbox defaults
+            for (const [key, val] of Object.entries(window.printOptions)) {
+                const cb = document.getElementById(`toggle-${key}`);
+                if (cb) {
+                    cb.checked = val;
+                }
+                updatePreviewSettings(key, val);
+            }
+        }
+
+        function compileSelectedTemplate() {
+            const template = window.activePrintTemplate;
+            const opt = window.printOptions;
+            
+            const logo = S.cfg.logo || "";
+            const name = S.cfg.name || "দারুল উলুম মঈনুল ইসলাম";
+            const address = S.cfg.address || "হাটহাজারী, চট্টগ্রাম";
+            const phone = S.cfg.phone || "01712345678";
+            const printDate = bnNum(new Date().toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' }));
+            
+            let logoHtml = logo ? `<img src="${logo}" class="w-12 h-12 object-contain" referrerPolicy="no-referrer" />` : `
+                <div class="w-12 h-12 bg-p3/10 rounded-full border border-p3/30 flex items-center justify-center text-p3 font-black text-xs uppercase select-none">MQ</div>
+            `;
+            
+            let headerSectionHtml = `
+                <div class="border-b-2 border-slate-300 pb-4 mb-4 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="print-logo">${logoHtml}</div>
+                        <div class="text-left space-y-0.5">
+                            <h1 class="print-name text-base md:text-lg font-black text-slate-800 leading-tight">${name}</h1>
+                            <p class="print-address text-[10px] md:text-xs text-slate-500 font-medium">${address}</p>
+                            <p class="print-phone text-[10px] md:text-xs text-slate-500 font-mono">মোবাইল: ${bnNum(phone)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right text-[10px] text-slate-400 font-medium select-none">
+                        <p class="print-date">মুদ্রণ তারিখ: ${printDate}</p>
+                        <p class="font-mono text-[9px] text-emerald-700 font-extrabold uppercase tracking-widest">Office Copy</p>
+                    </div>
+                </div>
+            `;
+            
+            let signatureSectionHtml = `
+                <div class="print-signature mt-8 pt-8 border-t border-dashed border-slate-200 grid grid-cols-3 gap-4 text-center text-[10px] md:text-xs text-slate-500 font-semibold select-none">
+                    <div class="space-y-4">
+                        <div class="h-6"></div>
+                        <div class="border-t border-slate-300 pt-1">শিক্ষার্থী / অভিভাবক স্বাক্ষর</div>
+                    </div>
+                    <div class="space-y-4 flex flex-col items-center justify-end">
+                        <div class="print-seal w-14 h-14 border-2 border-dashed border-p3/40 rounded-full flex items-center justify-center text-[9px] text-p3 tracking-tight font-black uppercase rotate-6 mb-1">
+                            সিল ও সই
+                        </div>
+                        <div class="w-full border-t border-slate-300 pt-1">বিভাগীয় প্রধান / আদায়কারী</div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="h-6"></div>
+                        <div class="border-t border-slate-300 pt-1 font-bold text-p1">মুহতামিম / অধ্যক্ষ স্বাক্ষর</div>
+                    </div>
+                </div>
+            `;
+            
+            let watermarkHtml = `
+                <div class="print-watermark watermark text-slate-250/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-30 text-5xl md:text-6xl font-black uppercase tracking-widest pointer-events-none select-none z-0">
+                    ${name.substring(0, 15)}
+                </div>
+            `;
+            
+            let innerContent = "";
+            let documentTitle = "";
+            
+            switch (template) {
+                case "admission-form": {
+                    documentTitle = "ভর্তি ও দাখেলা আবেদন পত্র";
+                    const student = S.students.find(st => st.id === opt.studentId) || S.students[0] || {};
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-start gap-4">
+                                <span class="px-3 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700">দাখেলা সেশন: ২০২৬ইং</span>
+                                <div class="w-24 h-28 border-2 border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-medium bg-slate-50 rounded-sm">
+                                    পাসপোর্ট ছবি
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="text-slate-400 font-bold col-span-1">দাখেলা আইডি:</div>
+                                    <div class="col-span-2 font-bold text-slate-800 font-mono">${student.id || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">শিক্ষার্থীর নাম:</div>
+                                    <div class="col-span-2 font-bold text-slate-800 text-sm">${student.name || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">জামাত / শ্রেণী:</div>
+                                    <div class="col-span-2 font-bold text-slate-800">${student.jamat || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">বিভাগ / শাখা:</div>
+                                    <div class="col-span-2 font-bold text-slate-800">${student.section || "N/A"}</div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="text-slate-400 font-bold col-span-1">পিতার নাম:</div>
+                                    <div class="col-span-2 font-bold text-slate-800">${student.father || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">মাতার নাম:</div>
+                                    <div class="col-span-2 font-bold text-slate-800">${student.mother || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">মোবাইল ফোন:</div>
+                                    <div class="col-span-2 font-bold text-slate-800 font-mono">${student.phone || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">রক্তের গ্রুপ:</div>
+                                    <div class="col-span-2 font-bold text-red-600">${student.blood || "N/A"}</div>
+                                </div>
+                            </div>
+                            
+                            <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700 font-bold text-[10px] uppercase tracking-wider">
+                                        <th class="p-3">বিবরণ খাতসমূহ</th>
+                                        <th class="p-3 text-right">আদায় পরিমাণ (টাকা)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    <tr>
+                                        <td class="p-3 text-slate-600 font-semibold">মাসিক পড়াশোনা বেতন</td>
+                                        <td class="p-3 text-right font-mono font-bold text-slate-800">৳${bnNum(student.salary || "০")}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-3 text-slate-600 font-semibold">আবাসিক চার্জ (বোর্ডিং ফি)</td>
+                                        <td class="p-3 text-right font-mono font-bold text-slate-800">৳${student.resident === "হ্যাঁ" ? bnNum("১০০০") : bnNum("০")}</td>
+                                    </tr>
+                                    <tr class="bg-slate-50/50 font-bold">
+                                        <td class="p-3 text-slate-800">ভর্তি খতিয়ান তারিখ</td>
+                                        <td class="p-3 text-right font-mono text-slate-800">${bnNum(student.ভর্তি_তারিখ || "N/A")}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "student-profile": {
+                    const student = S.students.find(st => st.id === opt.studentId) || S.students[0] || {};
+                    documentTitle = `ছাত্র বিবরণী ও অগ্রগতি খতিয়ান ডায়েরি`;
+                    
+                    const stHajira = (S.hajira || []).filter(h => h.studentId === student.id);
+                    const totalH = stHajira.length;
+                    const presentH = stHajira.filter(h => h.status === "উপস্থিতি").length;
+                    const rate = totalH > 0 ? Math.round((presentH / totalH) * 100) : 100;
+                    
+                    const personalFees = (S.fees || []).filter(f => f.studentId === student.id);
+                    const totalPaid = personalFees.reduce((sum, f) => sum + parseInt(toEngNum(f.amount || "0")), 0);
+                    
+                    const personalReading = (S.hifzRecs || []).filter(r => r.studentId === student.id);
+                    const latestReading = personalReading.length > 0 ? personalReading[0] : null;
+                    
+                    innerContent = `
+                        <div class="space-y-5 z-10 relative">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-3 bg-emerald-50/30 p-4 border border-emerald-100 rounded-xl">
+                                    <h3 class="text-xs font-bold text-emerald-800 border-b border-emerald-100 pb-1.5 flex items-center gap-1"><i data-lucide="user" class="w-3.5 h-3.5"></i> সাধারণ পরিচিতি</h3>
+                                    <table class="w-full text-[11px] space-y-1">
+                                        <tr><td class="text-slate-400 w-1/3">নাম:</td><td class="font-bold text-slate-800">${student.name || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">দাখেলা আইডি:</td><td class="font-bold font-mono text-slate-800">${student.id || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">জামাত / শাখা:</td><td class="font-bold text-slate-800">${student.jamat || "N/A"} (${student.section || "N/A"})</td></tr>
+                                        <tr><td class="text-slate-400">রক্ত / লিঙ্গ:</td><td class="font-bold text-slate-800">${student.blood || "N/A"} | ${student.gender || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">জন্ম তারিখ:</td><td class="font-bold text-slate-800 font-mono">${bnNum(student.dob || "N/A")}</td></tr>
+                                    </table>
+                                </div>
+                                <div class="space-y-3 bg-slate-50/50 p-4 border border-slate-200 rounded-xl">
+                                    <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-1.5 flex items-center gap-1"><i data-lucide="phone" class="w-3.5 h-3.5"></i> যোগাযোগের তথ্য</h3>
+                                    <table class="w-full text-[11px] space-y-1">
+                                        <tr><td class="text-slate-400 w-1/3">পিতার নাম:</td><td class="font-bold text-slate-800">${student.father || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">মাতার নাম:</td><td class="font-bold text-slate-800">${student.mother || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">ফোন নম্বর:</td><td class="font-bold text-slate-800 font-mono">${student.phone || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">বর্তমান ঠিকানা:</td><td class="font-bold text-slate-800">${student.address || "N/A"}</td></tr>
+                                        <tr><td class="text-slate-400">আবাসিক অবস্থা:</td><td class="font-bold text-emerald-700">${student.resident === "হ্যাঁ" ? "আবাসিক ছাত্র (Residential)" : "অনাবাসিক ছাত্র"}</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg text-center space-y-0.5">
+                                    <div class="text-[9px] text-slate-400 font-bold uppercase">মাসিক হাজিরা রেট</div>
+                                    <div class="text-base font-black font-mono text-emerald-700">${bnNum(rate)}%</div>
+                                    <div class="text-[9px] text-slate-400">মোট হাজিরা কার্যদিবস: ${bnNum(totalH)} দিন</div>
+                                </div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg text-center space-y-0.5">
+                                    <div class="text-[9px] text-slate-400 font-bold uppercase">মোট সংগৃহীত পরিশোধিত ফি</div>
+                                    <div class="text-base font-black font-mono text-slate-800">৳${bnNum(totalPaid)}</div>
+                                    <div class="text-[9px] text-slate-400">মোট রশিদ খতিয়ান: ${bnNum(personalFees.length)} টি</div>
+                                </div>
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg text-center space-y-0.5">
+                                    <div class="text-[9px] text-slate-400 font-bold uppercase">শেখার অগ্রগতি / পাঠ খতিয়ান</div>
+                                    <div class="text-xs font-bold text-slate-700 max-w-full truncate">${latestReading ? `${latestReading.type} (${latestReading.status})` : "কোনো রেকর্ড নেই"}</div>
+                                    <div class="text-[9px] text-p3">সর্বশেষ আপডেট: ${latestReading ? bnNum(latestReading.date) : "N/A"}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-1.5">
+                                <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1"><i data-lucide="book-open" class="w-3.5 h-3.5"></i> সাম্প্রতিক পড়ার খতিয়ান রেকর্ড সমূহ</h4>
+                                <table class="w-full text-[10px] md:text-xs border border-slate-200 text-left">
+                                    <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10px]">
+                                        <th class="p-2">তারিখ</th>
+                                        <th class="p-2">সবক পারা/আয়াত</th>
+                                        <th class="p-2">সবকী পারা/আয়াত</th>
+                                        <th class="p-2">আমুখতা পারা/পৃষ্ঠা</th>
+                                        <th class="p-2 text-right">অগ্রগতি মান</th>
+                                    </tr>
+                                    ${personalReading.slice(0, 3).map(r => `
+                                        <tr class="border-b border-slate-150">
+                                            <td class="p-2 font-mono whitespace-nowrap">${bnNum(r.date)}</td>
+                                            <td class="p-2">${bnNum(r.sabakPara || "-")} পারা (${bnNum(r.sabakQty || "-")})</td>
+                                            <td class="p-2">${bnNum(r.sabkiPara || "-")} পারা (${bnNum(r.sabkiQty || "-")})</td>
+                                            <td class="p-2">${bnNum(r.amukhtaPara || "-")} পারা (${bnNum(r.amukhtaQty || "-")})</td>
+                                            <td class="p-2 text-right font-bold text-emerald-800">${r.status || "N/A"}</td>
+                                        </tr>
+                                    `).join('')}
+                                    ${personalReading.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">কোনো পড়ার রেকর্ড পাওয়া যায়নি</td></tr>` : ''}
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "id-card": {
+                    const student = S.students.find(st => st.id === opt.studentId) || S.students[0] || {};
+                    documentTitle = "শিক্ষার্থীর ডিজিটাল আইডি কার্ড (Identity Card)";
+                    
+                    innerContent = `
+                        <div class="z-10 relative flex justify-center py-4">
+                            <div class="w-[280px] border border-emerald-250 bg-white shadow-xl rounded-2xl overflow-hidden text-center text-xs relative font-sans flex flex-col justify-between">
+                                <div class="bg-gradient-to-b from-p1 to-p3 text-white px-2 py-4 space-y-1 flex flex-col items-center select-none">
+                                    <h4 class="text-[11px] font-black tracking-wide truncate max-w-full">${name}</h4>
+                                    <p class="text-[7.5px] text-emerald-100/90 tracking-widest uppercase">${address}</p>
+                                </div>
+                                
+                                <div class="px-4 py-5 flex-1 flex flex-col items-center space-y-4">
+                                    <div class="relative select-none">
+                                        <div class="w-20 h-20 bg-p5 border-2 border-emerald-500 rounded-full flex items-center justify-center text-p3 text-xs font-black p-0.5 shadow-sm overflow-hidden bg-slate-50">
+                                            <div class="w-full h-full rounded-full border border-dashed border-emerald-200/50 flex items-center justify-center font-bold text-lg">🧑‍🎓</div>
+                                        </div>
+                                        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-p3 text-white border border-emerald-400 rounded-full text-[7px] font-bold uppercase tracking-wider">ছাত্র</span>
+                                    </div>
+                                    
+                                    <div class="space-y-1">
+                                        <h3 class="text-sm font-black text-slate-800">${student.name || "শিক্ষার্থীর নাম"}</h3>
+                                        <p class="font-mono text-[9px] text-p3 font-extrabold tracking-wider bg-p5 px-2 py-0.5 rounded-full inline-block">আইডি রোল: ${student.id || "MQ-2026-000"}</p>
+                                    </div>
+                                    
+                                    <table class="w-full text-left text-[10px] space-y-1 font-semibold">
+                                        <tr class="border-b border-slate-100"><td class="text-slate-400 py-1">জামাত / শ্রেণী:</td><td class="font-bold text-slate-700 text-right py-1">${student.jamat || "N/A"}</td></tr>
+                                        <tr class="border-b border-slate-100"><td class="text-slate-400 py-1">বিভাগ / শাখা:</td><td class="font-bold text-slate-700 text-right py-1">${student.section || "N/A"}</td></tr>
+                                        <tr class="border-b border-slate-100"><td class="text-slate-400 py-1">অভিভাবক ফোন:</td><td class="font-bold text-slate-700 text-right font-mono py-1">${student.phone || "N/A"}</td></tr>
+                                        <tr class="border-b border-slate-100"><td class="text-slate-400 py-1">রক্তের গ্রুপ:</td><td class="font-bold text-red-650 text-right py-1">${student.blood || "N/A"}</td></tr>
+                                    </table>
+                                </div>
+                                
+                                <div class="bg-slate-50 border-t border-slate-200 p-2.5 flex items-center justify-between text-[8px] text-slate-400 font-medium select-none">
+                                    <div class="text-left">
+                                        <p>মেয়াদকাল: ৩১ ডিসেম্বর ২০২৬ইং</p>
+                                        <p class="font-mono text-[6.5px] text-slate-300">Darul Uloom ID System</p>
+                                    </div>
+                                    <div class="text-right flex flex-col items-end">
+                                        <div class="w-10 h-4 border-b border-slate-400"></div>
+                                        <p class="text-[7.5px] font-bold text-p1 mt-0.5">প্রধান মুহতামিম</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "admit-card": {
+                    const student = S.students.find(st => st.id === opt.studentId) || S.students[0] || {};
+                    documentTitle = "পরীক্ষার প্রবেশপত্র (Student Admit Card)";
+                    
+                    innerContent = `
+                        <div class="space-y-5 z-10 relative">
+                            <div class="text-center space-y-1 py-1 border-y-2 border-slate-300 select-none">
+                                <h3 class="text-sm font-black text-slate-850 uppercase tracking-widest">সাময়িক ও বার্ষিক পরীক্ষা প্রবেশপত্র - ২০২৬ইং</h3>
+                                <p class="text-[9px] text-slate-500 font-bold">মাদ্রাসার অফিসিয়াল নিয়ন্ত্রণ বোর্ডের পরীক্ষা প্রবেশপত্র খতিয়ান</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 bg-slate-50/50 rounded-xl p-4">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="text-slate-400 font-bold col-span-1">পরীক্ষার্থীর নাম:</div>
+                                    <div class="col-span-2 font-bold text-slate-800 text-sm">${student.name || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">দাখেলা আইডি নং:</div>
+                                    <div class="col-span-2 font-bold font-mono text-slate-800">${student.id || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">জামাত / শ্রেণী:</div>
+                                    <div class="col-span-2 font-bold text-slate-850">${student.jamat || "N/A"}</div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <div class="text-slate-400 font-bold col-span-1">বিভাগ / শাখা:</div>
+                                    <div class="col-span-2 font-bold text-slate-800">${student.section || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">পিতার নাম:</div>
+                                    <div class="col-span-2 font-bold text-slate-800">${student.father || "N/A"}</div>
+                                    
+                                    <div class="text-slate-400 font-bold col-span-1">হল রুম:</div>
+                                    <div class="col-span-2 font-bold text-p1 font-bold">মাদ্রাসার প্রধান মিলনায়তন হল</div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1 select-none"><i data-lucide="check-square" class="w-4 h-4 text-p3"></i> পরীক্ষা বিষয়ের খতিয়ান তালিকা</h4>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    ${["কুরআন মজিদ", "হিফয খতিয়ান", "তাজবিদ তত্ত্ব", "আরবি ব্যাকরণ", "দৈনিক ফিকহ খতিয়ান", "বাংলা ও সাধারণ গণিত"].map(sub => `
+                                        <div class="p-2 border border-slate-200 rounded-lg flex items-center gap-2 bg-white">
+                                            <div class="w-4.5 h-4.5 border border-slate-300 rounded flex items-center justify-center text-[10px] text-p3 font-bold select-none bg-slate-50">✓</div>
+                                            <span class="text-xs font-bold text-slate-600">${sub}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-900 leading-relaxed space-y-1 select-none">
+                                <span class="font-bold flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-700"></i> শৃঙ্খলাবিধি:</span>
+                                <p>১. পরীক্ষা শুরুর কমপক্ষে ৩০ মিনিট পূর্বে অবশ্যই আসন গ্রহণ করিতে হইবে। ২. প্রবেশপত্র প্রদর্শন ছাড়া পরীক্ষায় অংশ নেওয়া যাইবে না। ৩. উত্তরপত্রে অস্বচ্ছ বা নিয়ম ভঙ্গ প্রমাণিত ইলে সাময়িক মেম্বারশিপ বা পরীক্ষা বাতিল করার অধিকার অধ্যক্ষ সংরক্ষণ করেন।</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "fee-receipt": {
+                    const fee = S.fees.find(f => f.id === opt.feeId) || S.fees[0] || {};
+                    const student = S.students.find(st => st.id === fee.studentId) || S.students[0] || {};
+                    documentTitle = "পরিশোধ রসিদ (RCT-০৭ মেমো)";
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200 font-semibold text-xs">
+                                <div class="space-y-1">
+                                    <p class="text-xs font-bold text-slate-700">রশিদ ভাউচার নম্বর: <span class="font-mono text-p3 font-black bg-p5 border border-emerald-100 rounded px-1.5 py-0.5">${fee.receiptNo || "RCT-000"}</span></p>
+                                    <p class="text-[10px] text-slate-400">পরিশোধের মাস খাত: <span class="font-bold text-slate-700">${fee.month || "N/A"}</span></p>
+                                </div>
+                                <div class="text-right text-[10px] text-slate-500 font-semibold space-y-0.5">
+                                    <p>তারিখ: ${bnNum(fee.date || "N/A")}</p>
+                                    <p>মাধ্যম: ${fee.method || "ক্যাশ"}</p>
+                                </div>
+                            </div>
+                            
+                            <table class="w-full text-xs text-left border border-slate-200">
+                                <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200">
+                                    <th class="p-3">ক্রেডিট বিবরণ খতিয়ান খাত</th>
+                                    <th class="p-3">শিক্ষার্থী আইডি ও শ্রেণী</th>
+                                    <th class="p-3 text-right">আদায় পরিমাণ (টাকা)</th>
+                                </tr>
+                                <tr class="border-b border-slate-150">
+                                    <td class="p-3 font-bold text-slate-800">
+                                        মাসিক পড়াশোনা বেতন (${fee.month || "চলতি মাস"})
+                                        <p class="text-[9px] text-slate-400 font-normal">রশিদ বই খতিয়ান অনুসারে সংগৃহীত</p>
+                                    </td>
+                                    <td class="p-3 text-slate-600 font-semibold">
+                                        <p class="font-bold text-slate-700">${student.name || "N/A"}</p>
+                                        <p class="font-mono text-[9px] text-slate-400">রোল: ${student.id || "N/A"}</p>
+                                    </td>
+                                    <td class="p-3 text-right font-mono font-bold text-slate-800">৳${bnNum(fee.amount || "০")}</td>
+                                </tr>
+                                <tr class="bg-slate-100 font-black text-slate-800">
+                                    <td colspan="2" class="p-3 text-right">সর্বমোট প্রাপ্ত পরিমাণ (টাকা)</td>
+                                    <td class="p-3 text-right font-mono text-[13px] text-p1">৳${bnNum(fee.amount || "০")}</td>
+                                </tr>
+                            </table>
+                            
+                            <div class="p-3 bg-emerald-50 rounded-lg text-[10px] text-emerald-800 font-bold border border-emerald-100 select-none">
+                                🤝 আলহামদুলিল্লাহ! আপনার মূল্যবান অবদান মাদ্রাসার দ্বীনি কাজে সংরক্ষিত ও ব্যবহৃত হইলো। আল্লাহ কবুল করুন।
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "salary-receipt": {
+                    const salary = S.salaries.find(s => s.id === opt.salaryId) || S.salaries[0] || {};
+                    const teacher = S.teachers.find(t => t.id === salary.teacherId) || S.teachers[0] || {};
+                    documentTitle = "শিক্ষক ও কর্মকর্তা বেতন আদায় মেমো";
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-semibold text-xs">
+                                <div class="space-y-0.5">
+                                    <p class="text-[10px] text-slate-400">সম্মানিত শিক্ষকের নাম:</p>
+                                    <h3 class="text-sm font-black text-slate-850">${teacher.name || salary.teacherName || "N/A"}</h3>
+                                    <p class="text-[9.5px] text-slate-400">পদবি: <span class="font-bold text-slate-700">${teacher.designation || "N/A"}</span> | আইডি: <span class="font-mono font-bold text-slate-700">${salary.teacherId || "N/A"}</span></p>
+                                </div>
+                                <div class="text-left sm:text-right text-[10.5px] text-slate-500 font-semibold space-y-0.5">
+                                    <p>বেতন মাস: <span class="font-bold text-slate-800">${salary.month || "N/A"}</span></p>
+                                    <p>পরিশোধ তারিখ: <span class="font-mono text-slate-700">${bnNum(salary.paymentDate || "N/A")}</span></p>
+                                    <p>পরিশোধের মাধ্যম: <span class="font-bold text-slate-800">${salary.notes || "নগদ ক্যাশ"}</span></p>
+                                </div>
+                            </div>
+                            
+                            <table class="w-full text-xs text-left border border-slate-200 font-semibold">
+                                <tr class="bg-slate-100 font-bold text-slate-600 border-b border-slate-200">
+                                    <th class="p-3">Earnings (উপার্জন খাতসমূহ)</th>
+                                    <th class="p-3 text-right">পরিমাণ (টাকা)</th>
+                                </tr>
+                                <tr class="border-b border-slate-150">
+                                    <td class="p-3 font-semibold text-slate-800">
+                                        মূল স্কেল মাসিক বেতন (Basic Scale Salary)
+                                        <p class="text-[9.5px] text-slate-400 font-normal">মঞ্চুরিকৃত বেতন গ্রেড অনুসারে</p>
+                                    </td>
+                                    <td class="p-3 text-right font-mono font-bold text-slate-850">৳${bnNum(salary.amount || "০")}</td>
+                                </tr>
+                                <tr class="border-b border-slate-150">
+                                    <td class="p-3 font-semibold text-slate-800">বোনাস ও বিশেষ উৎসব ভাতা</td>
+                                    <td class="p-3 text-right font-mono font-bold text-slate-400">৳০</td>
+                                </tr>
+                                <tr class="bg-slate-100 font-black text-slate-800">
+                                    <td class="p-3 text-right text-slate-800">সর্বমোট পরিশোধিত নিট টাকা</td>
+                                    <td class="p-3 text-right font-mono text-[13px] text-p3">৳${bnNum(salary.amount || "০")}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "income-report": {
+                    documentTitle = "ক্যাশ ক্লাসিফায়েড আয় বিবরণী";
+                    
+                    const filteredIncomes = (S.expenses || []).filter(item => {
+                        const isIncome = item.type === "আয়" || item.category === "দান"; 
+                        if (!isIncome) return false;
+                        if (opt.startDate && item.date < opt.startDate) return false;
+                        if (opt.endDate && item.date > opt.endDate) return false;
+                        return true;
+                    });
+                    
+                    const totalIncome = filteredIncomes.reduce((sum, item) => sum + parseInt(toEngNum(item.amount || "0")), 0);
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-200 select-none">
+                                <span class="bg-p5 border border-emerald-100 text-p3 font-bold px-3 py-1 rounded-full">রিপোর্ট টাইপ: আয় খতিয়ান</span>
+                                <span class="text-slate-500 font-semibold">পিরিয়ড: ${bnNum(opt.startDate)} হতে ${bnNum(opt.endDate)}</span>
+                            </div>
+                            
+                            <table class="w-full text-xs text-left border border-slate-200">
+                                <thead>
+                                    <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10.5px]">
+                                        <th class="p-3">তারিখ</th>
+                                        <th class="p-3">আয় ক্যাটাগরি খাত</th>
+                                        <th class="p-3">আয় বিবরণী / সূত্র</th>
+                                        <th class="p-3 text-right">পরিমাণ (৳)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredIncomes.map(inc => `
+                                        <tr>
+                                            <td class="p-3 font-mono text-slate-500">${bnNum(inc.date)}</td>
+                                            <td class="p-3 font-bold text-slate-800">${inc.category || "দান ও ফি"}</td>
+                                            <td class="p-3 text-slate-500">${inc.description || "নগদ কালেকশন"}</td>
+                                            <td class="p-3 text-right font-mono font-bold text-slate-700">৳${bnNum(inc.amount)}</td>
+                                        </tr>
+                                    `).join('')}
+                                    ${filteredIncomes.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">এই পিরিয়ডে কোনো আয় খতিয়ান রেকর্ড পাওয়া যায়নি!</td></tr>` : ''}
+                                    <tr class="bg-slate-50 font-black text-slate-800 border-t border-slate-300">
+                                        <td colspan="3" class="p-3 text-right text-xs">সর্বমোট আয় আদায়:</td>
+                                        <td class="p-3 text-right font-mono text-[13px] text-p1">৳${bnNum(totalIncome)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "expense-report": {
+                    documentTitle = "ক্যাশ ক্লাসিফায়েড ব্যয় বিবরণী";
+                    
+                    const filteredExpenses = (S.expenses || []).filter(item => {
+                        const isExpense = item.type === "ব্যয়" || item.category === "বোর্ডিং" || item.category === "অফিস খরচ"; 
+                        if (!isExpense) return false;
+                        if (opt.startDate && item.date < opt.startDate) return false;
+                        if (opt.endDate && item.date > opt.endDate) return false;
+                        return true;
+                    });
+                    
+                    const totalExpense = filteredExpenses.reduce((sum, item) => sum + parseInt(toEngNum(item.amount || "0")), 0);
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-200 select-none">
+                                <span class="bg-red-50 border border-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">রিপোর্ট টাইপ: ব্যয় খতিয়ান</span>
+                                <span class="text-slate-500 font-semibold">পিরিয়ড: ${bnNum(opt.startDate)} হতে ${bnNum(opt.endDate)}</span>
+                            </div>
+                            
+                            <table class="w-full text-xs text-left border border-slate-200">
+                                <thead>
+                                    <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10.5px]">
+                                        <th class="p-3">তারিখ</th>
+                                        <th class="p-3">ব্যয় খাত বিভাগ</th>
+                                        <th class="p-3">ব্যয় ভাউচার সূত্র / মন্তব্য</th>
+                                        <th class="p-3 text-right">পরিমাণ (৳)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filteredExpenses.map(exp => `
+                                        <tr>
+                                            <td class="p-3 font-mono text-slate-500">${bnNum(exp.date)}</td>
+                                            <td class="p-3 font-bold text-slate-800">${exp.category || "অফিস ও বোর্ডিং"}</td>
+                                            <td class="p-3 text-slate-500">${exp.description || "অফিসিয়াল খরচ"}</td>
+                                            <td class="p-3 text-right font-mono font-bold text-slate-700">৳${bnNum(exp.amount)}</td>
+                                        </tr>
+                                    `).join('')}
+                                    ${filteredExpenses.length === 0 ? `<tr><td colspan="4" class="p-6 text-center text-slate-400">এই পিরিয়ডে কোনো ব্যয় বিবরণী রেকর্ড পাওয়া যায়নি!</td></tr>` : ''}
+                                    <tr class="bg-slate-50 font-black text-slate-800 border-t border-slate-300">
+                                        <td colspan="3" class="p-3 text-right text-xs">সর্বমোট অনুমোদিত ব্যয়:</td>
+                                        <td class="p-3 text-right font-mono text-[13px] text-red-600">৳${bnNum(totalExpense)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "cashbook": {
+                    documentTitle = "ক্যাশ বুক খতিয়ান সারসংক্ষেপ";
+                    
+                    const list = S.expenses || [];
+                    let totalInc = 0;
+                    let totalExp = 0;
+                    
+                    const incCats = {};
+                    const expCats = {};
+                    
+                    list.forEach(item => {
+                        if (opt.startDate && item.date < opt.startDate) return;
+                        if (opt.endDate && item.date > opt.endDate) return;
+                        
+                        const amt = parseInt(toEngNum(item.amount || "0")) || 0;
+                        const isIncome = item.type === "আয়" || item.category === "দান";
+                        
+                        if (isIncome) {
+                            totalInc += amt;
+                            incCats[item.category || "দান ও অন্যান্য"] = (incCats[item.category || "দান ও অন্যান্য"] || 0) + amt;
+                        } else {
+                            totalExp += amt;
+                            expCats[item.category || "অফিস ও বোর্ডিং"] = (expCats[item.category || "অফিস ও বোর্ডিং"] || 0) + amt;
+                        }
+                    });
+                    
+                    const closingBalance = totalInc - totalExp;
+                    
+                    innerContent = `
+                        <div class="space-y-6 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-200 select-none">
+                                <span class="bg-p5 border border-emerald-100 text-p3 font-bold px-3 py-1 rounded-full text-xs">রিপোর্ট খতিয়ান: ক্যাশ বুক সমাপনী</span>
+                                <span class="text-slate-500 font-semibold font-mono">সময়কাল: ${bnNum(opt.startDate)} থেকে ${bnNum(opt.endDate)}</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 font-semibold text-xs">
+                                <div class="p-4 bg-emerald-50/50 border border-emerald-150 rounded-xl space-y-1">
+                                    <p class="text-[10px] text-emerald-850 uppercase font-black">মোট প্রাপ্ত আয় কালেকশন (+)</p>
+                                    <h4 class="text-lg font-black font-mono text-emerald-700">৳${bnNum(totalInc)}</h4>
+                                    <p class="text-[9px] text-slate-400">এই পিরিয়ডের জমা ক্রেডিট খতিয়ান</p>
+                                </div>
+                                <div class="p-4 bg-red-50/40 border border-red-150 rounded-xl space-y-1">
+                                    <p class="text-[10px] text-red-850 uppercase font-black">মোট খরচ ও বিতরণ ডেবিট (-)</p>
+                                    <h4 class="text-lg font-black font-mono text-red-600 font-mono">৳${bnNum(totalExp)}</h4>
+                                    <p class="text-[9px] text-slate-400">সকল ডিপার্টমেন্টের পরিশোধ খাত</p>
+                                </div>
+                                <div class="p-4 bg-blue-50/40 border border-blue-150 rounded-xl space-y-1">
+                                    <p class="text-[10px] text-blue-800 uppercase font-black">নিট নগদ সমাপনী জের (Cash Balance)</p>
+                                    <h4 class="text-lg font-black font-mono text-slate-800">৳${bnNum(closingBalance)}</h4>
+                                    <p class="text-[9px] text-slate-400">ক্যাশে সংরক্ষিত সমাপনী জের</p>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                <div class="space-y-2">
+                                    <h5 class="text-xs font-black text-emerald-800 border-b border-emerald-100 pb-1.5 flex items-center gap-1 select-none"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i> আয় খাতসমূহ বিবরণী</h5>
+                                    <table class="w-full text-xs space-y-1">
+                                        <tr class="font-bold border-b border-slate-100 text-slate-450"><td class="py-1">আয় খাত ক্যাটাগরি</td><td class="text-right py-1">মোট পরিমাণ</td></tr>
+                                        ${Object.entries(incCats).map(([cat, amt]) => `
+                                            <tr class="border-b border-slate-100 text-slate-700 font-bold">
+                                                <td class="py-1.5">${cat}</td>
+                                                <td class="text-right font-mono text-slate-800 font-black">৳${bnNum(amt)}</td>
+                                            </tr>
+                                        `).join('')}
+                                        ${Object.keys(incCats).length === 0 ? `<tr><td colspan="2" class="py-4 text-center text-slate-400">কোনো আয় খতিয়ান রেকর্ড নেই</td></tr>` : ''}
+                                    </table>
+                                </div>
+                                <div class="space-y-2">
+                                    <h5 class="text-xs font-black text-red-800 border-b border-red-100 pb-1.5 flex items-center gap-1 select-none"><i data-lucide="trending-down" class="w-3.5 h-3.5"></i> ব্যয় খাতসমূহ বিবরণী</h5>
+                                    <table class="w-full text-xs space-y-1">
+                                        <tr class="font-bold border-b border-slate-100 text-slate-455"><td class="py-1">ব্যয় খাত ক্যাটাগরি</td><td class="text-right py-1">মোট পরিমাণ</td></tr>
+                                        ${Object.entries(expCats).map(([cat, amt]) => `
+                                            <tr class="border-b border-slate-100 text-slate-700 font-bold">
+                                                <td class="py-1.5">${cat}</td>
+                                                <td class="text-right font-mono text-slate-800 font-black">৳${bnNum(amt)}</td>
+                                            </tr>
+                                        `).join('')}
+                                        ${Object.keys(expCats).length === 0 ? `<tr><td colspan="2" class="py-4 text-center text-slate-400">কোনো ব্যয় খতিয়ান রেকর্ড নেই</td></tr>` : ''}
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "student-list": {
+                    documentTitle = "শ্রেণী ভিত্তিক সক্রিয় ছাত্র-ছাত্রী খতিয়ান খাতা";
+                    const filtered = S.students.filter(st => {
+                        if (opt.section && st.section !== opt.section) return false;
+                        if (opt.jamat && !st.jamat.includes(opt.jamat)) return false;
+                        return true;
+                    });
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200 select-none">
+                                <span class="font-bold text-slate-700">জামত ও বিভাগ: <span class="text-p3 font-extrabold">${opt.section || "সব বিভাগ"} ${opt.jamat ? `(${opt.jamat})` : ""}</span></span>
+                                <span class="text-slate-400">মোট শিক্ষার্থী: <span class="font-bold text-p3 font-mono">${bnNum(filtered.length)}</span> জন</span>
+                            </div>
+                            
+                            <table class="w-full text-[10.5px] border border-slate-200 text-left leading-relaxed">
+                                <thead>
+                                    <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10px]">
+                                        <th class="p-2">দাখেলা আইডি</th>
+                                        <th class="p-2">শিক্ষার্থীর নাম</th>
+                                        <th class="p-2">জামাত/শ্রেণী</th>
+                                        <th class="p-2">মিডিয়া ফোন</th>
+                                        <th class="p-2">রক্তগ্রুপ</th>
+                                        <th class="p-2">آবাসিক অবস্থা</th>
+                                        <th class="p-2">ভর্তি তারিখ</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${filtered.map(st => `
+                                        <tr class="font-semibold text-slate-700">
+                                            <td class="p-2 font-mono font-bold text-slate-500">${st.id}</td>
+                                            <td class="p-2 font-black text-slate-850">${st.name}</td>
+                                            <td class="p-2 whitespace-nowrap">${st.jamat || "N/A"} (${st.section || "N/A"})</td>
+                                            <td class="p-2 font-mono">${st.phone}</td>
+                                            <td class="p-2 font-bold text-red-500">${st.blood || "-"}</td>
+                                            <td class="p-2 text-emerald-850 font-bold">${st.resident || "না"}</td>
+                                            <td class="p-2 font-mono text-slate-450">${bnNum(st.ভর্তি_তারিখ || "-")}</td>
+                                        </tr>
+                                    `).join('')}
+                                    ${filtered.length === 0 ? `<tr><td colspan="7" class="p-6 text-center text-slate-400">কোনো ছাত্র-ছাত্রী রেকর্ড পাওয়া যায়নি!</td></tr>` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "teacher-list": {
+                    documentTitle = "সম্মানিত শিক্ষক ও কর্মকর্তা রেজিস্টার";
+                    const list = S.teachers || [];
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200 select-none">
+                                <span class="font-bold text-slate-700">সকল কর্মরত শিক্ষক তালিকা</span>
+                                <span class="text-slate-400">মোট কর্মরত স্টাফ: <span class="font-bold text-p3 font-mono">${bnNum(list.length)}</span> জন</span>
+                            </div>
+                            
+                            <table class="w-full text-xs border border-slate-200 text-left">
+                                <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10.5px]">
+                                    <th class="p-2">স্টাফ আইডি</th>
+                                    <th class="p-2">শিক্ষক নাম ও পদবি</th>
+                                    <th class="p-2">শাখা পর্যায়</th>
+                                    <th class="p-2">যোগাযোগ ফোন</th>
+                                    <th class="p-2">যোগদান তারিখ</th>
+                                    <th class="p-2 text-right">সম্মানি স্কেল (৳)</th>
+                                </tr>
+                                ${list.map(t => `
+                                    <tr class="border-b border-slate-100 font-semibold text-slate-700">
+                                        <td class="p-2 font-mono text-slate-500">${t.id}</td>
+                                        <td class="p-2">
+                                            <p class="font-bold text-slate-800">${t.name}</p>
+                                            <p class="text-[9.5px] text-slate-405">${t.designation}</p>
+                                        </td>
+                                        <td class="p-2">${t.section || "-"}</td>
+                                        <td class="p-2 font-mono">${t.phone}</td>
+                                        <td class="p-2 font-mono">${bnNum(t.joinDate || "-")}</td>
+                                        <td class="p-2 text-right font-mono font-bold text-slate-850">৳${bnNum(t.salary)}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "donor-list": {
+                    documentTitle = "দ্বীনি দাতা সদস্য খতিয়ান বুক";
+                    const list = S.donors || [];
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200 select-none">
+                                <span class="font-bold text-slate-700">দাতা সদস্য ও পৃষ্ঠপোষকদের তালিকা বিবরণী</span>
+                                <span class="text-slate-400">মোট আজীবন ট্রাস্টি: <span class="font-bold text-p3 font-mono">${bnNum(list.length)}</span> জন</span>
+                            </div>
+                            
+                            <table class="w-full text-xs border border-slate-200 text-left">
+                                <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10.5px]">
+                                    <th class="p-2">দাতা আইডি</th>
+                                    <th class="p-2">দাতা মেম্বার নাম</th>
+                                    <th class="p-2">সদস্য ধরন</th>
+                                    <th class="p-2">বর্তমান ঠিকানা</th>
+                                    <th class="p-2">যোগাযোগ ফোন</th>
+                                    <th class="p-2 text-right">নিট পরিশোধ অনুদান</th>
+                                </tr>
+                                ${list.map(d => `
+                                    <tr class="border-b border-slate-100 font-semibold text-slate-700">
+                                        <td class="p-2 font-mono text-slate-500">${d.id || "-"}</td>
+                                        <td class="p-2 font-bold text-slate-855">${d.name}</td>
+                                        <td class="p-2 text-emerald-850 font-bold whitespace-nowrap">${d.type || "এককালীন সদস্য"}</td>
+                                        <td class="p-2 text-slate-500">${d.address || "-"}</td>
+                                        <td class="p-2 font-mono">${d.phone}</td>
+                                        <td class="p-2 text-right font-mono font-bold text-slate-800">৳${bnNum(d.amount)}</td>
+                                    </tr>
+                                `).join('')}
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "boarding-report": {
+                    documentTitle = "বোর্ডিং কিচেন বাজার খরচ খতিয়ান";
+                    const list = S.boarding || [];
+                    let totalExp = 0;
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200 select-none">
+                                <span class="font-bold text-slate-700">বোর্ডিং বাজার ভাউচার ডায়েরি</span>
+                                <span class="text-slate-400 font-mono">সময়কাল: ${bnNum(opt.startDate)} হতে ${bnNum(opt.endDate)}</span>
+                            </div>
+                            
+                            <table class="w-full text-xs border border-slate-200 text-left">
+                                <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10.5px]">
+                                    <th class="p-2">ভাউচার নং</th>
+                                    <th class="p-2">তারিখ</th>
+                                    <th class="p-2">ক্যাটাগরি</th>
+                                    <th class="p-2">আইটেম বিবরণী ও পরিমান</th>
+                                    <th class="p-2 text-right">মোট খরচের অঙ্ক (৳)</th>
+                                </tr>
+                                ${list.map(v => {
+                                    const rawTotal = parseInt(toEngNum(v.total || "0")) || 0;
+                                    totalExp += rawTotal;
+                                    return `
+                                        <tr class="border-b border-slate-100 font-semibold text-slate-700">
+                                            <td class="p-2 font-mono text-slate-500">${v.id || "N/A"}</td>
+                                            <td class="p-2 font-mono">${bnNum(v.date || "-")}</td>
+                                            <td class="p-2 font-bold text-slate-800">${v.type || "বাজার"}</td>
+                                            <td class="p-2 text-slate-500 text-[11px]">
+                                                ${(v.items || []).map(it => `${it.name} (${bnNum(it.qty)} ${it.unit})`).join(', ')}
+                                            </td>
+                                            <td class="p-2 text-right font-mono font-bold text-slate-800">৳${bnNum(rawTotal)}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                                <tr class="bg-slate-50 font-black text-slate-800 border-t border-slate-300">
+                                    <td colspan="4" class="p-3 text-right">সর্বমোট সংগৃহীত বোর্ডিং বাজার খরচ:</td>
+                                    <td class="p-3 text-right font-mono text-[13px] text-p1">৳${bnNum(totalExp)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+                
+                case "attendance-report": {
+                    documentTitle = "ছাত্র-ছাত্রী ক্লাসরুম উপস্থিতি সামারি";
+                    const students = S.students || [];
+                    const hajira = S.hajira || [];
+                    
+                    const filteredSt = students.filter(st => {
+                        if (opt.section && st.section !== opt.section) return false;
+                        return true;
+                    });
+                    
+                    innerContent = `
+                        <div class="space-y-4 z-10 relative">
+                            <div class="flex justify-between items-center text-xs pb-1.5 border-b border-slate-200 select-none">
+                                <span class="font-bold text-slate-700">শ্রেণী পর্যায়: <span class="text-p3 font-black">${opt.section || "সব বিভাগ"}</span></span>
+                                <span class="text-slate-400">রিপোর্ট খতিয়ান তারিখ: ${bnNum(opt.endDate || "আজ")}</span>
+                            </div>
+                            
+                            <table class="w-full text-xs border border-slate-200 text-left">
+                                <tr class="bg-slate-50 font-bold border-b border-slate-200 text-slate-600 text-[10.5px]">
+                                    <th class="p-2">দাখেলা আইডি</th>
+                                    <th class="p-2">শিক্ষার্থীর নাম</th>
+                                    <th class="p-2 text-center">মোট হাজিরা দিন</th>
+                                    <th class="p-2 text-center text-emerald-700">উপস্থিতি</th>
+                                    <th class="p-2 text-center text-red-600">অনুপস্থিতি</th>
+                                    <th class="p-2 text-right">শতকরা হার (%)</th>
+                                </tr>
+                                ${filteredSt.map(st => {
+                                    const stH = hajira.filter(h => h.studentId === st.id);
+                                    const total = stH.length;
+                                    const present = stH.filter(h => h.status === "উপস্থিতি").length;
+                                    const absent = stH.filter(h => h.status === "অনুপস্থিতি").length;
+                                    const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+                                    
+                                    return `
+                                        <tr class="border-b border-slate-100 font-semibold text-slate-700">
+                                            <td class="p-2 font-mono text-slate-500">${st.id}</td>
+                                            <td class="p-2 font-bold text-slate-800">${st.name}</td>
+                                            <td class="p-2 text-center font-mono">${bnNum(total)}</td>
+                                            <td class="p-2 text-center font-mono text-emerald-750 font-bold">${bnNum(present)}</td>
+                                            <td class="p-2 text-center font-mono text-red-540">${bnNum(absent)}</td>
+                                            <td class="p-2 text-right font-mono font-bold text-emerald-800">${bnNum(rate)}%</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </table>
+                        </div>
+                    `;
+                    break;
+                }
+            }
+            
+            let fullHtmlString = `
+                <div class="relative w-full h-full p-4 overflow-hidden print-layout select-text text-sm">
+                    <div class="watermark-wrapper absolute inset-0 overflow-hidden pointer-events-none select-none z-0 hidden">
+                        ${watermarkHtml}
+                    </div>
+                    
+                    <div class="content flex flex-col justify-between h-full space-y-6 relative z-10">
+                        <div class="header-wrapper">
+                            ${headerSectionHtml}
+                        </div>
+                        
+                        <div class="text-center my-2 select-none">
+                            <h2 class="inline-block px-4 py-1.5 bg-slate-100/50 border border-slate-250/30 rounded-xl text-xs font-black text-slate-800 tracking-wide uppercase">
+                                ${documentTitle}
+                            </h2>
+                        </div>
+                        
+                        <div class="main-body-wrapper flex-grow">
+                            ${innerContent}
+                        </div>
+                        
+                        <div class="footer-wrapper">
+                            ${signatureSectionHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return fullHtmlString;
         }
 
 
