@@ -2932,6 +2932,16 @@
             doc.close();
         }
 
+        function renderToggleCheckbox(key, label) {
+            const checkedAttr = window.printOptions[key] ? 'checked' : '';
+            return `
+                <label class="flex items-center gap-2.5 py-1.5 cursor-pointer select-none group text-xs text-slate-600 font-bold">
+                    <input type="checkbox" ${checkedAttr} onchange="updatePreviewSettings('${key}', this.checked)" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                    <span class="group-hover:text-slate-900 transition-colors">${label}</span>
+                </label>
+            `;
+        }
+
         function triggerPrintFromPreview() {
             const inner = document.getElementById("preview-sheet-inner");
             if (!inner) return;
