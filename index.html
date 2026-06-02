@@ -268,14 +268,6 @@
                     </div>
                 </div>
 
-                <!-- Prayer Timings Gauge -->
-                <div class="bg-white border border-n7 rounded-xl p-4 shadow-sm">
-                    <h3 class="text-xs font-semibold text-slate-800 mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4 text-p3"></i> আজকের নামাজের সময় (ঢাকা, বাংলাদেশ)</h3>
-                    <div class="grid grid-cols-5 gap-2" id="prayer-timings-container">
-                        <!-- Loading default prayer placeholders -->
-                    </div>
-                </div>
-
                 <!-- Modules Render Panels Grid -->
                 <div id="active-panel-container">
                     <!-- Dashboard modules or inner views inserted here dynamically -->
@@ -570,20 +562,6 @@
                     const hijri = json.data.date.hijri;
                     const monthBn = hijriMonthBn[hijri.month.en] || hijri.month.ar;
                     document.getElementById("badge-hijri").innerText = `${bnNum(hijri.day)} ${monthBn} ${bnNum(hijri.year)} হিজরি`;
-                    
-                    // Render prayer timings
-                    const timings = json.data.timings;
-                    const prayers = { Fajr: "ফজর", Dhuhr: "যোহর", Asr: "আসর", Maghrib: "মাগরিব", Isha: "এশা" };
-                    let html = "";
-                    for (const [key, label] of Object.entries(prayers)) {
-                        html += `
-                            <div class="bg-emerald-50 border border-emerald-100 flex flex-col items-center py-2 px-1.5 rounded-lg">
-                                <span class="text-[10px] md:text-xs text-p1 font-medium font-sans">${label}</span>
-                                <span class="text-[10px] font-bold font-mono text-slate-800 mt-1">${bnNum(timings[key])}</span>
-                            </div>
-                        `;
-                    }
-                    document.getElementById("prayer-timings-container").innerHTML = html;
                     return;
                 }
             } catch (err) {
@@ -593,17 +571,6 @@
             // Fallback
             const offline = getHijriOffline(today);
             document.getElementById("badge-hijri").innerText = `${bnNum(offline.d)} ${offline.m} ${bnNum(offline.y)} হিজরি`;
-            const staticTimes = { "ফজর": "০৪:১৫", "যোহর": "১২:১০", "আসর": "০৪:৪৫", "মাগরিব": "০৬:৪৫", "এশা": "০৮:১৫" };
-            let html = "";
-            for (const [label, val] of Object.entries(staticTimes)) {
-                 html += `
-                    <div class="bg-slate-50 border border-slate-200/60 flex flex-col items-center py-2 px-1.5 rounded-lg opacity-85">
-                        <span class="text-[10px] md:text-xs text-slate-600 font-medium font-sans">${label}</span>
-                        <span class="text-[10px] font-bold font-mono text-slate-800 mt-1">${val}</span>
-                    </div>
-                `;
-            }
-            document.getElementById("prayer-timings-container").innerHTML = html;
         }
 
         // --- 4. Authentic Inline Camera Captured input fallback ---
@@ -3263,8 +3230,8 @@
                         <div class="space-y-4 z-10 relative">
                             <div class="flex justify-between items-start gap-4">
                                 <span class="px-3 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700">দাখেলা সেশন: ২০২৬ইং</span>
-                                <div class="w-24 h-28 border-2 border-dashed border-slate-300 flex items-center justify-center text-[10px] text-slate-400 font-medium bg-slate-50 rounded-sm">
-                                    পাসপোর্ট ছবি
+                                <div class="w-24 h-28 border border-slate-300 overflow-hidden bg-slate-50 rounded-sm shadow-2xs">
+                                    <img src="${student.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full object-cover">
                                 </div>
                             </div>
                             
@@ -3344,13 +3311,18 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="space-y-3 bg-emerald-50/30 p-4 border border-emerald-100 rounded-xl">
                                     <h3 class="text-xs font-bold text-emerald-800 border-b border-emerald-100 pb-1.5 flex items-center gap-1"><i data-lucide="user" class="w-3.5 h-3.5"></i> সাধারণ পরিচিতি</h3>
-                                    <table class="w-full text-[11px] space-y-1">
-                                        <tr><td class="text-slate-400 w-1/3">নাম:</td><td class="font-bold text-slate-800">${student.name || "N/A"}</td></tr>
-                                        <tr><td class="text-slate-400">দাখেলা আইডি:</td><td class="font-bold font-mono text-slate-800">${student.id || "N/A"}</td></tr>
-                                        <tr><td class="text-slate-400">জামাত / শাখা:</td><td class="font-bold text-slate-800">${student.jamat || "N/A"} (${student.section || "N/A"})</td></tr>
-                                        <tr><td class="text-slate-400">রক্ত / লিঙ্গ:</td><td class="font-bold text-slate-800">${student.blood || "N/A"} | ${student.gender || "N/A"}</td></tr>
-                                        <tr><td class="text-slate-400">জন্ম তারিখ:</td><td class="font-bold text-slate-800 font-mono">${bnNum(student.dob || "N/A")}</td></tr>
-                                    </table>
+                                    <div class="flex gap-4 items-start">
+                                        <div class="w-16 h-20 bg-slate-100 rounded border border-slate-200 overflow-hidden flex-shrink-0">
+                                            <img src="${student.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full object-cover">
+                                        </div>
+                                        <table class="w-full text-[11px] space-y-1">
+                                            <tr><td class="text-slate-400 w-1/3">নাম:</td><td class="font-bold text-slate-800">${student.name || "N/A"}</td></tr>
+                                            <tr><td class="text-slate-400">দাখেলা আইডি:</td><td class="font-bold font-mono text-slate-800">${student.id || "N/A"}</td></tr>
+                                            <tr><td class="text-slate-400">জামাত / শাখা:</td><td class="font-bold text-slate-800">${student.jamat || "N/A"} (${student.section || "N/A"})</td></tr>
+                                            <tr><td class="text-slate-400">রক্ত / লিঙ্গ:</td><td class="font-bold text-slate-800">${student.blood || "N/A"} | ${student.gender || "N/A"}</td></tr>
+                                            <tr><td class="text-slate-400">জন্ম তারিখ:</td><td class="font-bold text-slate-800 font-mono">${bnNum(student.dob || "N/A")}</td></tr>
+                                        </table>
+                                    </div>
                                 </div>
                                 <div class="space-y-3 bg-slate-50/50 p-4 border border-slate-200 rounded-xl">
                                     <h3 class="text-xs font-bold text-slate-700 border-b border-slate-200 pb-1.5 flex items-center gap-1"><i data-lucide="phone" class="w-3.5 h-3.5"></i> যোগাযোগের তথ্য</h3>
@@ -3423,8 +3395,8 @@
                                 
                                 <div class="px-4 py-5 flex-1 flex flex-col items-center space-y-4">
                                     <div class="relative select-none">
-                                        <div class="w-20 h-20 bg-p5 border-2 border-emerald-500 rounded-full flex items-center justify-center text-p3 text-xs font-black p-0.5 shadow-sm overflow-hidden bg-slate-50">
-                                            <div class="w-full h-full rounded-full border border-dashed border-emerald-200/50 flex items-center justify-center font-bold text-lg">🧑‍🎓</div>
+                                        <div class="w-20 h-20 bg-p5 border-2 border-emerald-500 rounded-full flex items-center justify-center p-0.5 shadow-sm overflow-hidden bg-slate-50">
+                                            <img src="${student.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full rounded-full object-cover">
                                         </div>
                                         <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-p3 text-white border border-emerald-400 rounded-full text-[7px] font-bold uppercase tracking-wider">ছাত্র</span>
                                     </div>
@@ -3469,26 +3441,33 @@
                                 <p class="text-[9px] text-slate-500 font-bold">মাদ্রাসার অফিসিয়াল নিয়ন্ত্রণ বোর্ডের পরীক্ষা প্রবেশপত্র খতিয়ান</p>
                             </div>
                             
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 bg-slate-50/50 rounded-xl p-4">
-                                <div class="grid grid-cols-3 gap-2">
-                                    <div class="text-slate-400 font-bold col-span-1">পরীক্ষার্থীর নাম:</div>
-                                    <div class="col-span-2 font-bold text-slate-800 text-sm">${student.name || "N/A"}</div>
-                                    
-                                    <div class="text-slate-400 font-bold col-span-1">দাখেলা আইডি নং:</div>
-                                    <div class="col-span-2 font-bold font-mono text-slate-800">${student.id || "N/A"}</div>
-                                    
-                                    <div class="text-slate-400 font-bold col-span-1">জামাত / শ্রেণী:</div>
-                                    <div class="col-span-2 font-bold text-slate-850">${student.jamat || "N/A"}</div>
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 border border-slate-200 bg-slate-50/50 rounded-xl p-4 items-center">
+                                <div class="col-span-1 md:col-span-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div class="text-slate-400 font-bold col-span-1">পরীক্ষার্থীর নাম:</div>
+                                        <div class="col-span-2 font-bold text-slate-800 text-sm">${student.name || "N/A"}</div>
+                                        
+                                        <div class="text-slate-400 font-bold col-span-1">দাখেলা আইডি নং:</div>
+                                        <div class="col-span-2 font-bold font-mono text-slate-800">${student.id || "N/A"}</div>
+                                        
+                                        <div class="text-slate-400 font-bold col-span-1">জামাত / শ্রেণী:</div>
+                                        <div class="col-span-2 font-bold text-slate-850">${student.jamat || "N/A"}</div>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div class="text-slate-400 font-bold col-span-1">বিভাগ / শাখা:</div>
+                                        <div class="col-span-2 font-bold text-slate-800">${student.section || "N/A"}</div>
+                                        
+                                        <div class="text-slate-400 font-bold col-span-1">পিতার নাম:</div>
+                                        <div class="col-span-2 font-bold text-slate-800">${student.father || "N/A"}</div>
+                                        
+                                        <div class="text-slate-400 font-bold col-span-1">হল রুম:</div>
+                                        <div class="col-span-2 font-bold text-p1 font-bold">মাদ্রাসার প্রধান মিলনায়তন হল</div>
+                                    </div>
                                 </div>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <div class="text-slate-400 font-bold col-span-1">বিভাগ / শাখা:</div>
-                                    <div class="col-span-2 font-bold text-slate-800">${student.section || "N/A"}</div>
-                                    
-                                    <div class="text-slate-400 font-bold col-span-1">পিতার নাম:</div>
-                                    <div class="col-span-2 font-bold text-slate-800">${student.father || "N/A"}</div>
-                                    
-                                    <div class="text-slate-400 font-bold col-span-1">হল রুম:</div>
-                                    <div class="col-span-2 font-bold text-p1 font-bold">মাদ্রাসার প্রধান মিলনায়তন হল</div>
+                                <div class="col-span-1 md:col-span-2 flex justify-center md:justify-end">
+                                    <div class="w-20 h-24 border border-slate-300 rounded overflow-hidden shadow-xs bg-white p-1">
+                                        <img src="${student.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full object-cover">
+                                    </div>
                                 </div>
                             </div>
                             
@@ -3543,8 +3522,15 @@
                                         <p class="text-[9px] text-slate-400 font-normal">রশিদ বই খতিয়ান অনুসারে সংগৃহীত</p>
                                     </td>
                                     <td class="p-3 text-slate-600 font-semibold">
-                                        <p class="font-bold text-slate-700">${student.name || "N/A"}</p>
-                                        <p class="font-mono text-[9px] text-slate-400">রোল: ${student.id || "N/A"}</p>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-full border border-slate-200 overflow-hidden bg-white flex-shrink-0">
+                                                <img src="${student.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full object-cover">
+                                            </div>
+                                            <div>
+                                                <p class="font-bold text-slate-700">${student.name || "N/A"}</p>
+                                                <p class="font-mono text-[9px] text-slate-400">রোল: ${student.id || "N/A"}</p>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="p-3 text-right font-mono font-bold text-slate-800">৳${bnNum(fee.amount || "০")}</td>
                                 </tr>
@@ -3570,10 +3556,15 @@
                     innerContent = `
                         <div class="space-y-4 z-10 relative">
                             <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-semibold text-xs">
-                                <div class="space-y-0.5">
-                                    <p class="text-[10px] text-slate-400">সম্মানিত শিক্ষকের নাম:</p>
-                                    <h3 class="text-sm font-black text-slate-850">${teacher.name || salary.teacherName || "N/A"}</h3>
-                                    <p class="text-[9.5px] text-slate-400">পদবি: <span class="font-bold text-slate-700">${teacher.designation || "N/A"}</span> | আইডি: <span class="font-mono font-bold text-slate-700">${salary.teacherId || "N/A"}</span></p>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 rounded-full overflow-hidden border border-slate-200 bg-white flex-shrink-0">
+                                        <img src="${teacher && teacher.photo ? teacher.photo : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150'}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <p class="text-[10px] text-slate-400">সম্মানিত শিক্ষকের নাম:</p>
+                                        <h3 class="text-sm font-black text-slate-850">${teacher.name || salary.teacherName || "N/A"}</h3>
+                                        <p class="text-[9.5px] text-slate-400">পদবি: <span class="font-bold text-slate-700">${teacher.designation || "N/A"}</span> | আইডি: <span class="font-mono font-bold text-slate-700">${salary.teacherId || "N/A"}</span></p>
+                                    </div>
                                 </div>
                                 <div class="text-left sm:text-right text-[10.5px] text-slate-500 font-semibold space-y-0.5">
                                     <p>বেতন মাস: <span class="font-bold text-slate-800">${salary.month || "N/A"}</span></p>
@@ -10929,13 +10920,18 @@
                 const isSelected = window.selectedFeeStudent && window.selectedFeeStudent.id === s.id;
                 const borderStyle = isSelected ? 'border-[#0a6b38] bg-emerald-50/30' : 'border-slate-200 hover:border-emerald-300';
                 return `
-                    <div onclick="selectStudentForFee('${s.id}')" class="p-3 border rounded-xl cursor-pointer transition-all ${borderStyle} flex justify-between items-center text-xs font-semibold">
-                        <div class="space-y-0.5">
-                            <div class="font-extrabold text-slate-800">${s.name}</div>
-                            <div class="text-[9.5px] text-slate-400 font-mono">আইডি: ${s.id} | ফোন: ${bnNum(s.phone)}</div>
-                            <div class="text-[9.5px] text-slate-500">জামাত: ${s.jamat || 'হিফয'} (শাখা: ${s.section || 'হিফয'})</div>
+                    <div onclick="selectStudentForFee('${s.id}')" class="p-3 border rounded-xl cursor-pointer transition-all ${borderStyle} flex justify-between items-center text-xs font-semibold gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-full border border-slate-100 overflow-hidden flex-shrink-0 bg-white">
+                                <img src="${s.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="space-y-0.5 min-w-0">
+                                <div class="font-extrabold text-slate-800 truncate">${s.name}</div>
+                                <div class="text-[9.5px] text-slate-400 font-mono">আইডি: ${s.id} | ফোন: ${bnNum(s.phone)}</div>
+                                <div class="text-[9.5px] text-slate-500">জামাত: ${s.jamat || 'হিফয'} (শাখা: ${s.section || 'হিফয'})</div>
+                            </div>
                         </div>
-                        <div class="text-right">
+                        <div class="text-right flex-shrink-0">
                             <div class="text-[10px] text-p3 font-black">বেতন: ৳ ${bnNum(s.salary || '০')}</div>
                             ${isSelected ? `<span class="inline-block mt-1 px-1.5 py-0.5 bg-p3 text-white text-[8px] font-black rounded">নির্বাচিত</span>` : `<span class="inline-block mt-1 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[8px] rounded">বেছে নিন</span>`}
                         </div>
@@ -10972,11 +10968,16 @@
             
             cardContainer.innerHTML = `
                 <div class="bg-emerald-50/20 border border-emerald-150 rounded-xl p-4 flex gap-3 items-center justify-between mb-4">
-                    <div class="space-y-0.5">
-                        <span class="text-[9px] text-[#0a6b38] font-black block uppercase">নির্বাচিত শিক্ষার্থী কার্ড</span>
-                        <div class="text-sm font-extrabold text-slate-800">${s.name}</div>
-                        <div class="text-[9.5px] text-slate-400 font-mono">দাখেলা আইডি: ${s.id} | পিতা: ${s.father || 'অজানা'} | যোগাযোগ: ${bnNum(s.phone)}</div>
-                        <div class="text-[10px] text-slate-500">জামাত: ${s.jamat} (শাখা: ${s.section})</div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-full border border-slate-150 overflow-hidden bg-white flex-shrink-0">
+                            <img src="${s.photo || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150'}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="space-y-0.5">
+                            <span class="text-[9px] text-[#0a6b38] font-black block uppercase">নির্বাচিত শিক্ষার্থী কার্ড</span>
+                            <div class="text-sm font-extrabold text-slate-800">${s.name}</div>
+                            <div class="text-[9.5px] text-slate-400 font-mono">দাখেলা আইডি: ${s.id} | পিতা: ${s.father || 'অজানা'} | যোগাযোগ: ${bnNum(s.phone)}</div>
+                            <div class="text-[10px] text-slate-500">জামাত: ${s.jamat} (শাখা: ${s.section})</div>
+                        </div>
                     </div>
                     <div class="text-right flex-shrink-0">
                         <span class="text-[9px] text-slate-400 block font-bold">নির্ধারিত মাসিক বেতন</span>
