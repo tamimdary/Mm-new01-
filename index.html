@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>মাদ্রাসা ম্যানেজমেন্ট সিস্টেম</title>
     <!-- Google Fonts for Bengali and Latin text -->
-    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800;900&family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons CDN -->
@@ -24,7 +24,7 @@
                         n8: "#f8fafc"  /* Card bg */
                     },
                     fontFamily: {
-                        sans: ['Hind Siliguri', 'Inter', 'sans-serif'],
+                        sans: ['Noto Sans Bengali', 'Hind Siliguri', 'Inter', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                     }
                 }
@@ -32,7 +32,7 @@
         }
     </script>
     <style>
-        body { font-family: 'Hind Siliguri', 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+        body { font-family: 'Noto Sans Bengali', 'Hind Siliguri', 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
         .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
         /* Scrollbar styling */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -793,9 +793,10 @@
             const usernameInput = document.getElementById("login-username").value.trim();
 
             if (selectedRole === "অভিভাবক") {
-                // Guardian Login
-                const student = S.students.find(s => s.id === usernameInput);
-                const parentPass = S.cfg.parPw[usernameInput] || "parent123";
+                // Guardian Login - handle both English and Bengali numerals gracefully
+                const cleanInput = toEngNum(usernameInput).trim();
+                const student = S.students.find(s => toEngNum(String(s.id)).trim() === cleanInput);
+                const parentPass = S.cfg.parPw[cleanInput] || "parent123";
 
                 if (!student) {
                     toast("ভুল দাখেলা আইডি! ছাত্র খুঁজে পাওয়া যায়নি", "error");
@@ -1023,17 +1024,17 @@
             if (role === "মুহতামিম" || role === "শিক্ষক") {
                 content.innerHTML = `
                     <div class="text-xs text-slate-500 mb-4">আপনার কাজের এলাকা নির্বাচন করুন:</div>
-                    <button onclick="navigateView('students'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-150 text-xs rounded-lg font-semibold cursor-pointer text-center block mb-2">🧑‍🎓 নতুন ছাত্র ভর্তি নিশ্চিতকরণ ফর্মে যান</button>
-                    <button onclick="navigateView('notice'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-150 text-xs rounded-lg font-semibold cursor-pointer text-center block mb-2">📢 জরুরি নোটিশ পাঠান</button>
-                    <button onclick="navigateView('attendance'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-150 text-xs rounded-lg font-semibold cursor-pointer text-center block">📝 আজকের হাজিরা খাতা খুলুন</button>
+                    <button onclick="navigateView('students'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-200 text-xs rounded-lg font-semibold cursor-pointer text-center block mb-2">🧑‍🎓 নতুন ছাত্র ভর্তি নিশ্চিতকরণ ফর্মে যান</button>
+                    <button onclick="navigateView('notice'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-200 text-xs rounded-lg font-semibold cursor-pointer text-center block mb-2">📢 জরুরি নোটিশ পাঠান</button>
+                    <button onclick="navigateView('attendance'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-200 text-xs rounded-lg font-semibold cursor-pointer text-center block">📝 আজকের হাজিরা খাতা খুলুন</button>
                 `;
             } else if (role === "হিসাবরক্ষক") {
                 content.innerHTML = `
-                    <button onclick="navigateView('accounts'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-150 text-xs rounded-lg font-semibold cursor-pointer text-center block">৳ ফি সংগ্রহ করার ক্যাশে যান</button>
+                    <button onclick="navigateView('accounts'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-200 text-xs rounded-lg font-semibold cursor-pointer text-center block">৳ ফি সংগ্রহ করার ক্যাশে যান</button>
                 `;
             } else if (role === "বোর্ডিং") {
                 content.innerHTML = `
-                    <button onclick="navigateView('boarding'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-150 text-xs rounded-lg font-semibold cursor-pointer text-center block">🍽️ বোর্ডিং বাজার ভাউচার অনুমোদন করুন</button>
+                    <button onclick="navigateView('boarding'); toggleQuickPanel(false);" class="w-full py-2 bg-p5 hover:bg-emerald-100 text-p3 border border-emerald-200 text-xs rounded-lg font-semibold cursor-pointer text-center block">🍽️ বোর্ডিং বাজার ভাউচার অনুমোদন করুন</button>
                 `;
             } else {
                 content.innerHTML = `<div class="text-xs text-slate-400">এই রোলের জন্য কোনো কুইক এন্ট্রি নেই।</div>`;
@@ -1094,7 +1095,6 @@
             lucide.createIcons();
         }
 
-        // --- 10. STAFF WORKSPACE DASHBOARD RENDERER ---
         function renderStaffDashboard(dest) {
             // Update greeting in banners based on profile info
             const userName = S.user.name || "সম্মানিত ব্যবহারকারী";
@@ -1141,13 +1141,34 @@
             const paidStudentsThisMonth = (S.fees || []).filter(f => f.month === currentBnMonth).map(f => f.studentId);
             const pendingStudentsCountVal = S.students.filter(s => s.status === "সক্রিয়" && !paidStudentsThisMonth.includes(s.id)).length;
 
-            const hifzStudents = S.students.filter(s => s.section === "হিফয" || s.section === "হিфয" || s.jamat === "হিফয");
-            const totalHifzStudentsCount = hifzStudents.length;
+            const totalHifzStudentsCount = S.students.filter(s => s.section === "হিফয" || s.section === "হিфয" || s.jamat === "হিফয").length;
             let totalHifzPct = 0;
-            hifzStudents.forEach(s => {
-                totalHifzPct += getHifzProgress(s.id).pct;
+            S.students.forEach(s => {
+                if (s.section === "হিফয" || s.section === "হিфয" || s.jamat === "হিফয") {
+                    const { pct } = getHifzProgress(s.id);
+                    totalHifzPct += pct;
+                }
             });
             const avgHifzProgressPct = totalHifzStudentsCount > 0 ? Math.round(totalHifzPct / totalHifzStudentsCount) : 0;
+
+            // Calculate dynamic targets and percentage indicators for dashboards
+            const activeRate = S.students.length > 0 ? Math.round((S.students.filter(s => s.status === "সক্রিয়").length / S.students.length) * 100) : 100;
+            const dueRate = S.students.length > 0 ? Math.round(((S.students.length - S.fees.filter(f => f.month === "মার্চ").length) / S.students.length) * 100) : 0;
+            const boardingPct = Math.min(Math.round((todayExp / 5000) * 100), 100);
+            
+            const studyTarget = 20;
+            const studyPct = Math.min(Math.round((todayStudyRecsCount / studyTarget) * 100), 100);
+            const hifzTotalPct = S.students.length > 0 ? Math.round((totalHifzStudentsCount / S.students.length) * 100) : 0;
+            
+            const dailyTarget = 10000;
+            const dailyTargetPct = Math.min(Math.round((todayCollectedAmt / dailyTarget) * 100), 100);
+            const monthlyTarget = 150000;
+            const monthlyTargetPct = Math.min(Math.round((monthCollectedAmt / monthlyTarget) * 100), 100);
+            
+            const activeStudentsCount = S.students.filter(s => s.status === "সক্রিয়").length;
+            const paidStudentsCount = activeStudentsCount - pendingStudentsCountVal;
+            const paidPct = activeStudentsCount > 0 ? Math.round((paidStudentsCount / activeStudentsCount) * 100) : 100;
+
 
             dest.innerHTML = `
                 <!-- KPI Statistics Grid -->
@@ -2646,16 +2667,53 @@
             `;
         }
 
+        window.updatePrintSearch = function(val) {
+            window.printSearchQuery = val;
+            const container = document.getElementById("print-filters-container");
+            if (container) {
+                container.innerHTML = renderFiltersContent();
+                lucide.createIcons();
+                const studentIdNew = document.querySelector("#print-filters-container select")?.value;
+                if (studentIdNew && studentIdNew !== window.printOptions.studentId) {
+                    window.printOptions.studentId = studentIdNew;
+                    if (window.activePrintTemplate === "fee-receipt") {
+                        const list = (S.fees || []).filter(f => f.studentId === studentIdNew);
+                        window.printOptions.feeId = list.length > 0 ? list[0].id : "";
+                        container.innerHTML = renderFiltersContent();
+                        lucide.createIcons();
+                    }
+                }
+                const input = document.getElementById("print-student-q-input");
+                if (input) {
+                    input.focus();
+                    const len = val.length;
+                    input.setSelectionRange(len, len);
+                }
+            }
+        }
+
         function renderFiltersContent() {
             const template = window.activePrintTemplate;
-            const students = S.students || [];
+            let students = S.students || [];
             const teachers = S.teachers || [];
             
-            let html = "";
+            window.printSearchQuery = window.printSearchQuery || "";
+            if (window.printSearchQuery && (template === "admission-form" || template === "student-profile" || template === "id-card" || template === "admit-card" || template === "fee-receipt")) {
+                students = students.filter(s => matchStudentQuery(s, window.printSearchQuery));
+            }
             
-            if (template === "admission-form" || template === "student-profile" || template === "id-card" || template === "admit-card") {
+            let html = "";
+            const isStudentSelectTemplate = (template === "admission-form" || template === "student-profile" || template === "id-card" || template === "admit-card");
+            
+            if (isStudentSelectTemplate) {
                 html += `
                     <div class="space-y-3">
+                        <label class="block text-xs font-bold text-slate-600">শিক্ষার্থী খুঁজুন (নাম/আইডি/মোবাইল):</label>
+                        <div class="relative">
+                            <input type="text" id="print-student-q-input" oninput="window.updatePrintSearch(this.value)" value="${window.printSearchQuery}" placeholder="যেমন: আহসান হাবিব, অথবা ৫ ইত্যাদি..." class="w-full px-3 py-2 border border-n7 rounded-xl text-xs font-semibold focus:ring-p3 focus:outline-none pl-8">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"></i>
+                        </div>
+                        
                         <label class="block text-xs font-bold text-slate-600">শিক্ষার্থী নির্বাচন করুন <span class="text-red-500">*</span></label>
                         <select onchange="updatePrintOption('studentId', this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
                             ${students.map(st => `<option value="${st.id}" ${window.printOptions.studentId === st.id ? "selected" : ""}>${st.name} | রোল: ${st.id} | জামাত: ${st.jamat}</option>`).join('')}
@@ -2666,7 +2724,13 @@
             } else if (template === "fee-receipt") {
                 html += `
                     <div class="space-y-4">
-                        <div class="space-y-1.5">
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-slate-600">শিক্ষার্থী খুঁজুন (নাম/আইডি/মোবাইল):</label>
+                            <div class="relative">
+                                <input type="text" id="print-student-q-input" oninput="window.updatePrintSearch(this.value)" value="${window.printSearchQuery}" placeholder="যেমন: আহসান হাবিব, অথবা ৫ ইত্যাদি..." class="w-full px-3 py-2 border border-n7 rounded-xl text-xs font-semibold focus:ring-p3 focus:outline-none pl-8">
+                                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"></i>
+                            </div>
+                            
                             <label class="block text-xs font-bold text-slate-600">শিক্ষার্থী নির্বাচন করুন <span class="text-red-500">*</span></label>
                             <select onchange="onFeeStudentChanged(this.value)" class="w-full px-3 py-2.5 border border-n7 rounded-xl bg-white text-xs font-semibold focus:outline-none focus:ring-p3">
                                 <option value="">--- শিক্ষার্থী নির্বাচন করুন ---</option>
@@ -3177,9 +3241,14 @@
                 </div>
             `;
             
+            const watermarkLogoUrl = S.cfg.logo || "";
+            let watermarkLogoHtml = watermarkLogoUrl
+                ? `<img src="${watermarkLogoUrl}" style="max-height: 250px; max-width: 250px; filter: grayscale(100%) opacity(0.04); transform: rotate(-15deg);">`
+                : `<div style="font-size: 150px; color: #0a6b38; opacity: 0.035; transform: rotate(-15deg); font-weight: bold; font-family: sans-serif;">🕌</div>`;
+
             let watermarkHtml = `
-                <div class="print-watermark watermark text-slate-250/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-30 text-5xl md:text-6xl font-black uppercase tracking-widest pointer-events-none select-none z-0">
-                    ${name.substring(0, 15)}
+                <div class="print-watermark watermark absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none z-0" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+                    ${watermarkLogoHtml}
                 </div>
             `;
             
@@ -6101,20 +6170,41 @@
         // ==========================================
         // STUDENT SUB-MODULE IMPLEMENTATION GIGA-GRID
         // ==========================================
+        function matchStudentQuery(student, query) {
+            if (!student) return false;
+            if (!query) return true;
+            
+            const q = toEngNum(query).trim().toLowerCase();
+            if (!q) return true;
+            
+            const idStr = toEngNum(String(student.id || "")).trim().toLowerCase();
+            const nameStr = String(student.name || "").toLowerCase();
+            const phoneStr = toEngNum(String(student.phone || "")).trim().toLowerCase();
+            
+            return idStr.includes(q) || nameStr.includes(q) || phoneStr.includes(q);
+        }
+
         function genStudentId() {
-            const pfx = S.cfg?.pfx || "MQ";
-            const yr = S.cfg?.yr || "2026";
             let maxNum = 0;
-            S.students.forEach(s => {
-                if (s.id && s.id.startsWith(`${pfx}-${yr}-`)) {
-                    const numPart = parseInt(s.id.replace(`${pfx}-${yr}-`, ""));
-                    if (!isNaN(numPart) && numPart > maxNum) {
-                        maxNum = numPart;
+            const students = S.students || [];
+            students.forEach(s => {
+                const idStr = toEngNum(String(s.id || "")).trim();
+                if (/^\d+$/.test(idStr)) {
+                    const num = parseInt(idStr, 10);
+                    if (num > maxNum) {
+                        maxNum = num;
                     }
                 }
             });
-            const nextNum = String(maxNum + 1).padStart(3, '0');
-            return `${pfx}-${yr}-${nextNum}`;
+            if (maxNum === 0) {
+                // If no numeric IDs found, start from 1, making sure it doesn't conflict with existing string IDs mapped to number
+                let firstVal = 1;
+                while (students.some(s => String(s.id).trim() === String(firstVal))) {
+                    firstVal++;
+                }
+                return String(firstVal);
+            }
+            return String(maxNum + 1);
         }
 
         function renderStudentsModule(dest) {
@@ -6241,8 +6331,8 @@
             const filters = window.studentFilters || { name: "", id: "", division: "", jamat: "", gender: "", resident: "" };
 
             const filtered = S.students.filter(student => {
-                if (filters.name && !student.name.toLowerCase().includes(filters.name.toLowerCase())) return false;
-                if (filters.id && !student.id.toLowerCase().includes(filters.id.toLowerCase())) return false;
+                if (filters.name && !matchStudentQuery(student, filters.name)) return false;
+                if (filters.id && !matchStudentQuery(student, filters.id)) return false;
                 if (filters.division && student.section !== filters.division) return false;
                 if (filters.jamat && student.jamat !== filters.jamat) return false;
                 if (filters.gender && student.gender !== filters.gender) return false;
@@ -6405,8 +6495,9 @@
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 w-full font-medium">
                                     <div>
-                                        <label class="block text-slate-600 font-bold mb-1">ভর্তি দাখেলা আইডি (অপরিবর্তনযোগ্য)</label>
-                                        <input type="text" value="${s.id}" readonly class="w-full px-3 py-2 border border-n7 bg-slate-100 rounded-lg text-xs font-bold text-slate-800 font-mono outline-none">
+                                        <label class="block text-slate-600 font-bold mb-1">ভর্তি দাখেলা আইডি <span class="text-red-500">*</span></label>
+                                        <input type="text" id="stu-custom-id" required value="${s.id}" class="w-full px-3 py-2 border border-n7 rounded-lg text-xs font-bold text-slate-800 font-mono focus:ring-1 focus:ring-p3 focus:outline-none">
+                                        <p class="text-[9px] text-[#0a6b38] mt-1 font-semibold">* শুধুমাত্র নম্বর দিন (অটো-উইনিকনেস চেক হবে)।</p>
                                     </div>
                                     <div>
                                         <label class="block text-slate-600 font-bold mb-1">শিক্ষার্থীর পূর্ণ নাম (বাংলায়) <span class="text-red-500">*</span></label>
@@ -6613,11 +6704,35 @@
         function saveAdmissionForm(evt, id, isEdit) {
             evt.preventDefault();
 
+            const customIdInput = document.getElementById("stu-custom-id");
+            let finalId = id;
+            if (customIdInput) {
+                const cleaned = toEngNum(customIdInput.value.trim());
+                if (!cleaned) {
+                    toast("ভুল! ভর্তি দাখেলা আইডি আবশ্যক।");
+                    return;
+                }
+                if (!/^\d+$/.test(cleaned)) {
+                    toast("ভুল! ভর্তি দাখেলা আইডি শুধুমাত্র সংখ্যা হতে হবে!");
+                    return;
+                }
+                finalId = cleaned;
+            }
+
+            // Auto uniqueness check
+            const existingStudent = S.students.find(s => String(s.id).trim() === String(finalId).trim());
+            if (existingStudent) {
+                if (!isEdit || String(id).trim() !== String(finalId).trim()) {
+                    toast(`ভুল! দাখেলা আইডিটি (${finalId}) ইতিমধ্যেই শিক্ষার্থী (${existingStudent.name}) এর অধীনে সংরক্ষিত রয়েছে।`);
+                    return;
+                }
+            }
+
             const previewImg = document.getElementById("student-photo-preview");
             let base64Photo = window.editingStudentPhoto || (previewImg && !previewImg.classList.contains("hidden") ? previewImg.src : "");
 
             const newStudent = {
-                id: id,
+                id: finalId,
                 name: document.getElementById("stu-name").value.trim(),
                 gender: document.getElementById("stu-gender").value,
                 section: document.getElementById("stu-section").value,
@@ -6644,9 +6759,32 @@
             };
 
             if (isEdit) {
-                const idx = S.students.findIndex(x => x.id === id);
+                const idx = S.students.findIndex(x => String(x.id).trim() === String(id).trim());
                 if (idx !== -1) {
                     S.students[idx] = newStudent;
+                    
+                    // Relational integrity check: Update dependencies across references if ID changed!
+                    if (String(id).trim() !== String(finalId).trim()) {
+                        S.hajira.forEach(h => {
+                            if (String(h.studentId).trim() === String(id).trim()) {
+                                h.studentId = finalId;
+                            }
+                        });
+                        S.fees.forEach(f => {
+                            if (String(f.studentId).trim() === String(id).trim()) {
+                                f.studentId = finalId;
+                            }
+                        });
+                        S.hifzRecs.forEach(r => {
+                            if (String(r.studentId).trim() === String(id).trim()) {
+                                r.studentId = finalId;
+                            }
+                        });
+                        if (S.cfg.parPw && S.cfg.parPw[id]) {
+                            S.cfg.parPw[finalId] = S.cfg.parPw[id];
+                            delete S.cfg.parPw[id];
+                        }
+                    }
                     toast("শিক্ষার্থীর তথ্য সফলভাবে আপডেট ও ডায়েরিভুক্ত করা হয়েছে!");
                 }
             } else {
@@ -6658,7 +6796,7 @@
             const parentPwInput = document.getElementById("stu-parent-pw");
             if (parentPwInput) {
                 if (!S.cfg.parPw) S.cfg.parPw = {};
-                S.cfg.parPw[id] = parentPwInput.value.trim() || "parent123";
+                S.cfg.parPw[finalId] = parentPwInput.value.trim() || "parent123";
             }
 
             saveL();
@@ -8006,6 +8144,21 @@
             renderActiveAttendanceTab();
         }
 
+        window.updateTakeAttSearch = function(val) {
+            window.takeAttConfig.search = val;
+            const container = document.getElementById("att-tabs-container");
+            if (container) {
+                renderAttendanceTakeTab(container);
+                const input = document.getElementById("take-att-search-input-box");
+                if (input) {
+                    input.value = val;
+                    input.focus();
+                    const length = val.length;
+                    input.setSelectionRange(length, length);
+                }
+            }
+        }
+
         function renderAttendanceTakeTab(container) {
             const canTakeAttendance = S.role === "মুহতামিম" || S.role === "শিক্ষক" || S.role === "admin";
             
@@ -8013,18 +8166,24 @@
                 window.takeAttConfig = {
                     date: window.selectedAttendanceDate,
                     division: S.divisions[0] || "হিফয",
-                    jamat: ""
+                    jamat: "",
+                    search: ""
                 };
             }
+            window.takeAttConfig.search = window.takeAttConfig.search || "";
 
             const filteredStudentsList = S.students.filter(s => s.status === "সক্রিয়" && s.section === window.takeAttConfig.division);
             const rawJamats = [...new Set(filteredStudentsList.map(s => s.jamat))].filter(Boolean);
             
-            if (rawJamats.length > 0 && !rawJamats.includes(window.takeAttConfig.jamat)) {
+            if (rawJamats.length > 0 && window.takeAttConfig.jamat && !rawJamats.includes(window.takeAttConfig.jamat)) {
                 window.takeAttConfig.jamat = rawJamats[0];
             }
 
-            const finalMatchStudents = filteredStudentsList.filter(s => !window.takeAttConfig.jamat || s.jamat === window.takeAttConfig.jamat);
+            let finalMatchStudents = filteredStudentsList.filter(s => !window.takeAttConfig.jamat || s.jamat === window.takeAttConfig.jamat);
+            if (window.takeAttConfig.search) {
+                finalMatchStudents = finalMatchStudents.filter(s => matchStudentQuery(s, window.takeAttConfig.search));
+            }
+
             const existingRecords = S.hajira.filter(h => h.date === window.takeAttConfig.date);
             
             if (!window.tempTakeHajira || window.tempTakeHajiraDate !== window.takeAttConfig.date) {
@@ -8063,6 +8222,15 @@
                                     <option value="">সকল জামাত তালিকা</option>
                                     ${rawJamats.map(jm => `<option value="${jm}" ${window.takeAttConfig.jamat === jm ? 'selected' : ''}>জামাত: ${jm}</option>`).join('')}
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- 4. Quick Search Bar -->
+                        <div class="pt-3.5 border-t border-slate-100/50">
+                            <label class="block text-slate-500 mb-1 font-bold">শিক্ষার্থী চটজলদি অনুসন্ধান (নাম / দাখেলা নম্বর / অভিভাবক মোবাইল):</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-2.5 text-slate-400"><i data-lucide="search" class="w-3.5 h-3.5"></i></span>
+                                <input type="text" id="take-att-search-input-box" oninput="window.updateTakeAttSearch(this.value)" value="${window.takeAttConfig.search || ''}" placeholder="যেমন: আহসান হাবিব, অথবা ৫ ইত্যাদি..." class="w-full pl-9 pr-3 py-2 border border-n7 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-p3">
                             </div>
                         </div>
                     </div>
@@ -8721,13 +8889,17 @@
                 filtered = filtered.filter(r => r.division === window.readingFilters.division);
             }
             if (window.readingFilters.search) {
-                const searchLow = window.readingFilters.search.toLowerCase();
-                filtered = filtered.filter(r => 
-                    r.studentName.toLowerCase().includes(searchLow) || 
-                    r.studentId.toLowerCase().includes(searchLow) || 
-                    (r.teacher && r.teacher.toLowerCase().includes(searchLow)) ||
-                    (r.remark && r.remark.toLowerCase().includes(searchLow))
-                );
+                const q = toEngNum(window.readingFilters.search).trim().toLowerCase();
+                filtered = filtered.filter(r => {
+                    const studentObj = S.students.find(s => toEngNum(String(s.id)).trim() === toEngNum(String(r.studentId)).trim());
+                    const phoneVal = studentObj ? toEngNum(String(studentObj.phone || "")).trim().toLowerCase() : "";
+                    
+                    return r.studentName.toLowerCase().includes(q) || 
+                           toEngNum(String(r.studentId)).trim().toLowerCase().includes(q) || 
+                           phoneVal.includes(q) ||
+                           (r.teacher && r.teacher.toLowerCase().includes(q)) ||
+                           (r.remark && r.remark.toLowerCase().includes(q));
+                });
             }
 
             if (filtered.length === 0) {
@@ -8795,11 +8967,7 @@
                 filteredStudents = filteredStudents.filter(s => s.section === window.readingFilters.division);
             }
             if (window.readingFilters.search) {
-                const searchL = window.readingFilters.search.toLowerCase();
-                filteredStudents = filteredStudents.filter(s => 
-                    s.name.toLowerCase().includes(searchL) || 
-                    s.id.toLowerCase().includes(searchL)
-                );
+                filteredStudents = filteredStudents.filter(s => matchStudentQuery(s, window.readingFilters.search));
             }
 
             if (filteredStudents.length === 0) {
@@ -10747,11 +10915,7 @@
                 filtered = filtered.filter(s => s.jamat === jam);
             }
             if (q) {
-                filtered = filtered.filter(s => 
-                    (s.id || "").toLowerCase().includes(q) ||
-                    (s.name || "").toLowerCase().includes(q) ||
-                    (s.phone || "").toLowerCase().includes(q)
-                );
+                filtered = filtered.filter(s => matchStudentQuery(s, q));
             }
 
             filtered.sort((a, b) => a.name.localeCompare(b.name));
@@ -10964,6 +11128,17 @@
                         <div><span class="border-t border-slate-200 pt-1 w-20 inline-block text-emerald-800 font-extrabold">হিসাবরক্ষক</span></div>
                     </div>
                 </div>
+
+                <!-- Print Copy Options Selector -->
+                <div class="bg-emerald-50/70 border border-emerald-100 rounded-xl p-3 space-y-1 mt-4">
+                    <label class="block text-[10px] font-bold text-emerald-800 flex items-center gap-1">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> রসিদ প্রিন্ট কপি অপশন (Print Copy Options)
+                    </label>
+                    <select id="receipt-print-copy-type" class="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none">
+                        <option value="main" selected>শুধুমাত্র মূল কপি (Main Copy Only)</option>
+                        <option value="both">মূল কপি + অফিস কপি (Main Copy + Office Copy)</option>
+                    </select>
+                </div>
             `;
 
             const footer = document.getElementById("receipt-preview-footer");
@@ -11128,10 +11303,120 @@
                 ? `<img src="${logoBase64}" style="max-height: 55px; margin-bottom: 5px;">` 
                 : `<div style="font-size: 26px; color: #0a6b38; font-weight: bold; margin-bottom: 5px;">🕌</div>`;
 
+            // Read copy type (main vs both) from active page element
+            const copyType = document.getElementById("receipt-print-copy-type")?.value || "main";
+            
+            const student = S.students.find(s => String(s.id).trim() === String(draft.studentId).trim()) || {};
+
             const printWin = window.open("", "_blank");
             if (!printWin) {
                 alert("পপ-আপ উইন্ডো বা নতুন ট্যাব খুলতে ব্রাউজার অনুমতি দিন!");
                 return;
+            }
+
+            // Watermark logo definition
+            const watermarkLogoHtml = logoBase64
+                ? `<img src="${logoBase64}" style="max-height: 200px; max-width: 200px; filter: grayscale(100%) opacity(0.035); transform: rotate(-15deg);">`
+                : `<div style="font-size: 130px; color: #0a6b38; opacity: 0.03; transform: rotate(-15deg); font-weight: bold; font-family: sans-serif;">🕌</div>`;
+
+            // Function to generate the HTML for a single copy of the receipt
+            const generateReceiptHTML = (label) => `
+                <div class="receipt-container">
+                    <div class="watermark-container">
+                        ${watermarkLogoHtml}
+                    </div>
+                    
+                    <div style="font-size: 9px; font-weight: bold; text-align: right; text-transform: uppercase; letter-spacing: 0.5px; color: #888; border-bottom: 1px dotted #ccc; padding-bottom: 3px; margin-bottom: 8px;">
+                        ${label}
+                    </div>
+
+                    <div class="header-section">
+                        ${logoHtml}
+                        <h2>${S.cfg.name || "দারুল উলুম মঈনুল ইসলাম"}</h2>
+                        <p>${S.cfg.address || "হাটহাজারী, চট্টগ্রাম"} | ফোন: ${bnNum(S.cfg.phone || "017xxxxxxxx")}</p>
+                    </div>
+                    
+                    <div class="receipt-meta">
+                        <div>রশিদ নম্বর: <span class="badge">${draft.receiptNo}</span></div>
+                        <div>তারিখ: <span>${bnNum(draft.date)}</span></div>
+                    </div>
+
+                    <table class="detail-table">
+                        <tr>
+                            <td class="label">শিক্ষার্থীর নাম</td>
+                            <td class="value">${draft.studentName || student.name || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">দাখেলা আইডি নং</td>
+                            <td class="value">${draft.studentId || student.id || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">পিতার নাম</td>
+                            <td class="value">${student.father || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">জামাত / শ্রেণী</td>
+                            <td class="value">${student.jamat || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">বিভাগ / শাখা</td>
+                            <td class="value">${student.section || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">ঠিকানা / গ্রাম</td>
+                            <td class="value">${student.address || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">মোবাইল নম্বর</td>
+                            <td class="value">${student.phone || '---'}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">বেতন পরিশোধ মাস</td>
+                            <td class="value" style="color: #0c5730; font-weight: bold;">${draft.month}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">পেমেন্ট মেথড</td>
+                            <td class="value">${getBengaliPaymentMethod(draft.method)}</td>
+                        </tr>
+                        ${draft.notes ? `
+                        <tr>
+                            <td class="label">মন্তব্য / নোট</td>
+                            <td class="value" style="font-weight: normal; font-style: italic;">${draft.notes}</td>
+                        </tr>
+                        ` : ''}
+                    </table>
+
+                    <div class="amount-box">
+                        <div>
+                            <span>প্রাপ্ত পরিশোধিত টাকা</span>
+                            <strong>৳ ${bnNum(draft.amount)}</strong>
+                        </div>
+                        <div class="words-display">
+                            <span>কথায় টাকা</span>
+                            <strong>${convertNumberToBanglaWords(parseInt(draft.amount))} মাত্র</strong>
+                        </div>
+                    </div>
+
+                    <div class="signature-section">
+                        <div class="signature-line">গ্রাহক স্বাক্ষর</div>
+                        <div class="signature-line official">হিসাবরক্ষক</div>
+                    </div>
+                </div>
+            `;
+
+            let mainContent = "";
+            if (copyType === "both") {
+                mainContent = `
+                    ${generateReceiptHTML("মূল গ্রাহক কপি (Client Copy)")}
+                    
+                    <div class="scissor-line">
+                        <span>✂ কাঁচি দিয়ে কাটুন (Cut along dashed line) ✂</span>
+                    </div>
+                    
+                    ${generateReceiptHTML("অফিস কপি (Office Copy)")}
+                `;
+            } else {
+                mainContent = generateReceiptHTML("মূল গ্রাহক কপি (Client Copy)");
             }
 
             printWin.document.write(`
@@ -11142,26 +11427,43 @@
                         @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap');
                         body {
                             font-family: 'Hind Siliguri', 'Segoe UI', serif;
-                            padding: 40px;
+                            padding: 20px;
                             color: #222;
-                            background-color: #white;
+                            background-color: #ffffff;
                             display: flex;
-                            justify-content: center;
+                            flex-direction: column;
                             align-items: center;
-                            min-height: 80vh;
+                            min-height: 98vh;
                         }
                         .receipt-container {
                             width: 550px;
                             border: 2px dashed #0a6b38;
-                            padding: 30px;
+                            padding: 25px 30px;
                             border-radius: 12px;
                             background-color: #fafdfb;
+                            position: relative;
+                            overflow: hidden;
+                            margin: 10px 0;
+                            box-sizing: border-box;
+                        }
+                        .watermark-container {
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            pointer-events: none;
+                            z-index: 0;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
                         }
                         .header-section {
                             text-align: center;
                             border-bottom: 2px solid #0a6b38;
                             padding-bottom: 12px;
-                            margin-bottom: 20px;
+                            margin-bottom: 15px;
+                            position: relative;
+                            z-index: 10;
                         }
                         .header-section h2 {
                             margin: 2px 0;
@@ -11179,7 +11481,9 @@
                             justify-content: space-between;
                             font-size: 13px;
                             font-weight: 600;
-                            margin-bottom: 15px;
+                            margin-bottom: 12px;
+                            position: relative;
+                            z-index: 10;
                         }
                         .badge {
                             background-color: #e6f7ed;
@@ -11194,16 +11498,19 @@
                         .detail-table {
                             width: 100%;
                             border-collapse: collapse;
-                            margin-top: 15px;
-                            font-size: 13.5px;
+                            margin-top: 10px;
+                            font-size: 13px;
+                            position: relative;
+                            z-index: 10;
                         }
                         .detail-table td {
-                            padding: 10px 12px;
+                            padding: 6px 10px;
                             border-bottom: 1px solid #eee;
                         }
                         .detail-table td.label {
                             color: #555;
                             font-weight: 500;
+                            width: 35%;
                         }
                         .detail-table td.value {
                             text-align: right;
@@ -11213,12 +11520,14 @@
                         .amount-box {
                             background-color: #0a6b38;
                             color: #fff;
-                            padding: 15px;
+                            padding: 12px;
                             border-radius: 8px;
-                            margin-top: 20px;
+                            margin-top: 15px;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
+                            position: relative;
+                            z-index: 10;
                         }
                         .amount-box span {
                             font-size: 11px;
@@ -11234,14 +11543,17 @@
                             text-align: right;
                             border-left: 1px solid rgba(255,255,255,0.25);
                             padding-left: 15px;
+                            max-width: 60%;
                         }
                         .signature-section {
-                            margin-top: 50px;
+                            margin-top: 40px;
                             display: flex;
                             justify-content: space-between;
                             font-size: 11px;
                             font-weight: bold;
                             color: #666;
+                            position: relative;
+                            z-index: 10;
                         }
                         .signature-line {
                             border-top: 1px solid #ccc;
@@ -11252,6 +11564,26 @@
                         .signature-line.official {
                             color: #0a6b38;
                         }
+                        .scissor-line {
+                            width: 550px;
+                            text-align: center;
+                            margin: 20px 0;
+                            border-top: 2px dashed #bbb;
+                            position: relative;
+                        }
+                        .scissor-line span {
+                            position: absolute;
+                            top: -11px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            background-color: #fff;
+                            padding: 2px 12px;
+                            font-size: 10px;
+                            font-weight: bold;
+                            color: #888;
+                            border: 1px solid #ddd;
+                            border-radius: 99px;
+                        }
                         @media print {
                             body {
                                 padding: 0;
@@ -11259,72 +11591,24 @@
                             }
                             .receipt-container {
                                 border: 2px dashed #0a6b38;
+                                page-break-inside: avoid;
+                            }
+                            .scissor-line {
+                                display: block;
                             }
                         }
                     </style>
                 </head>
                 <body>
-                    <div class="receipt-container">
-                        <div class="header-section">
-                            ${logoHtml}
-                            <h2>${S.cfg.name || "দারুল উলুম মঈনুল ইসলাম"}</h2>
-                            <p>${S.cfg.address || "হাটহাজারী, চট্টগ্রাম"} | ফোন: ${bnNum(S.cfg.phone || "017xxxxxxxx")}</p>
-                        </div>
-                        
-                        <div class="receipt-meta">
-                            <div>রশিদ নম্বর: <span class="badge">${draft.receiptNo}</span></div>
-                            <div>তারিখ: <span>${bnNum(draft.date)}</span></div>
-                        </div>
-
-                        <table class="detail-table">
-                            <tr>
-                                <td class="label">শিক্ষার্থীর নাম</td>
-                                <td class="value">${draft.studentName}</td>
-                            </tr>
-                            <tr>
-                                <td class="label">দাখেলা আইডি নং</td>
-                                <td class="value">${draft.studentId}</td>
-                            </tr>
-                            <tr>
-                                <td class="label">বেতন পরিশোধ মাস</td>
-                                <td class="value" style="color: #0c5730;">${draft.month}</td>
-                            </tr>
-                            <tr>
-                                <td class="label">পেমেন্ট মেথড</td>
-                                <td class="value">${getBengaliPaymentMethod(draft.method)}</td>
-                            </tr>
-                            ${draft.notes ? `
-                            <tr>
-                                <td class="label">মন্তব্য / নোট</td>
-                                <td class="value" style="font-weight: normal; font-style: italic;">${draft.notes}</td>
-                            </tr>
-                            ` : ''}
-                        </table>
-
-                        <div class="amount-box">
-                            <div>
-                                <span>প্রাপ্ত পরিশোধিত টাকা</span>
-                                <strong>৳ ${bnNum(draft.amount)}</strong>
-                            </div>
-                            <div class="words-display">
-                                <span>কথায় টাকা</span>
-                                <strong>${convertNumberToBanglaWords(parseInt(draft.amount))} মাত্র</strong>
-                            </div>
-                        </div>
-
-                        <div class="signature-section">
-                            <div class="signature-line">গ্রাহক স্বাক্ষর</div>
-                            <div class="signature-line official">হিসাবরক্ষক</div>
-                        </div>
-                    </div>
-                    \<script>
+                    ${mainContent}
+                    ${'<script>'}
                         window.onload = function() {
                             window.print();
                             setTimeout(function() {
                                 window.close();
                             }, 500);
-                        }
-                    <\/script>
+                        };
+                    ${'</' + 'script>'}
                 </body>
                 </html>
             `);
